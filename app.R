@@ -1,4 +1,5 @@
 load_packages <- function() {
+    library(fs)
     library(openxlsx)
     library(base64enc)
     library(ggplot2)
@@ -11,21 +12,21 @@ load_packages <- function() {
 }
 load_packages()
 
+# Max file upload size of 50 MB
+options(shiny.maxRequestSize=50*1024^2)
+
 rm(list=ls())
 
 ui_function <- function(){ fluidPage(
 
     titlePanel(title=div(img(src=base64enc::dataURI(file="binary_fission_image.png", mime="image/png"),width=70,height=70),"Doublet Counter"),windowTitle = "Doublet Counter"),
 
-    #tags$a(href="https://serbuslab.weebly.com", "Serbus Lab Website","\n"),
     tags$a(href="https://github.com/Juan-CN/doublet-counter/","Macro for Generating Results.csv file --- Instructions for its Use --- and Program Source Code","\n"),
-
-    uiOutput("link"),
 
     sidebarLayout(position = "left",
                   sidebarPanel = sidebarPanel(
                       radioButtons(inputId = "image_summary_plot_button",
-                                   label = "1. Print Image Summary Plot(s) (y) or (n)",
+                                   label = "1. Print Image Summary Plot(s)",
                                    choices = c("y","n"),
                                    selected = "n"),
                       conditionalPanel(condition = "input.image_summary_plot_button == 'y'",
@@ -41,14 +42,19 @@ ui_function <- function(){ fluidPage(
                                 label = "3. Choose Results.csv File from your computer.",
                                 multiple = FALSE,
                                 accept = c(".csv")),
+                    radioButtons(inputId = "organize_or_not",
+                                label = "Organize Analysis files for download",
+                                choices = c("y","n"),
+                                selected = "n"),
+                    conditionalPanel(condition = "input.organize_or_not == 'y'",
+                        textInput(inputId = "organize_analysis_files_conditions",
+                                label = "Conditions by which to Organize Analysis files",
+                                value="",
+                                placeholder="word1, word2, word3, etc")),
                       downloadButton(outputId = "analysis_files_download_button",
                                      label = "4. Download Analysis Files"),
                       cat(file = stderr(), "UI created", "\n"),
-                      #tableOutput(outputId = "contents"),
-                      #tableOutput(outputId = "text"),
-                      #tableOutput(outputId = "uploaded_image_files")
                   ),
-                  #mainPanel = NULL
                   mainPanel= mainPanel(
                       tableOutput(outputId = "contents"),
                       tableOutput(outputId = "text"),
@@ -61,14 +67,8 @@ ui_function <- function(){ fluidPage(
 
 server <- shinyServer(function(input, output) {
 
-    url <- a("Serbus Laboratory", href="https://serbuslab.weebly.com")
-    output$tab <- renderUI({
-        tagList("URL link:", url)})
-
-
     # Show Binary Fission Image next to Title
     output$binary_fission_image<-renderImage({
-        #b64 <- base64enc::dataURI(file="binary_fission_image.png", mime="image/png");
         list(src = "./binary_fission_image.png")}, deleteFile = FALSE)
 
     # Remove old Analysis files
@@ -77,6 +77,7 @@ server <- shinyServer(function(input, output) {
         unlink(x = list.files(pattern = ".xlsx"))
         unlink(x = list.files(pattern = ".pdf"))
         unlink(x = list.dirs(path = "./packrat"), recursive=TRUE)
+        fs::dir_delete(list.dirs(recursive=FALSE)[list.dirs(recursive=FALSE) != "./rsconnect"])
     }
     start_fresh()
 
@@ -105,7 +106,7 @@ server <- shinyServer(function(input, output) {
     # Carry out the Analysis
     output$text<-renderTable({
         if (is.null(input$results_csv_file) == FALSE) {
-            withProgress(message = "Progress", min = 0, max = 1, style = "old", value = 0,
+            withProgress(message = "Obtaining coordinates from Results.csv", min = 0, max = 1, style = "old", value = 0,
                         expr = {
                             req(input$results_csv_file);
 
@@ -251,6 +252,7 @@ server <- shinyServer(function(input, output) {
                                                         image_files<-sort(image_files)
                                                         combined_name_path<-transform(input$images_file_input,newcol=paste(name,datapath))
                                                         combined_name_path<-sort(combined_name_path$newcol)
+                                                        combined_name_path<-as.character(combined_name_path)
                                                         sep_list<-strsplit(x=combined_name_path,split=" ")
                                                         a<-NULL
                                                         names<-vector()
@@ -325,9 +327,30 @@ server <- shinyServer(function(input, output) {
     output$analysis_files_download_button <- downloadHandler(
         filename = paste0("Analysis_Files_",gsub(x=format(Sys.Date(),format="%B %a %d %Y"),pattern=" ",replacement="_"),"Time_",gsub(x=format(Sys.time()),pattern=paste0(Sys.Date()," "),replacement=""),".zip"),
         content = function(con) {
-                    download_files <- list.files(pattern=".csv");
-                    download_files <- c(download_files,list.files(pattern=".pdf"))
-                    download_files <- c(download_files,list.files(pattern=".xlsx"))
+                    if (input$organize_analysis_files_conditions == ""){
+                        download_files <- list.files(pattern=".csv");
+                        download_files <- c(download_files,list.files(pattern=".pdf"))
+                        download_files <- c(download_files,list.files(pattern=".xlsx"))
+                    } else {
+                    conditions<-input$organize_analysis_files_conditions
+                    list_of_conditions<-strsplit(x=conditions,split=", ")[[1]]
+                    doublet_count_summary_file<-read.csv2(file="Doublet_Count_Summary.csv")
+                    l<-NULL
+                        for (l in seq_along(list_of_conditions)){
+                            folder_name<-paste0(list_of_conditions[l],"_folder")
+                            dir.create(path=paste0("./",folder_name))
+                            sub_file_dcsf<-doublet_count_summary_file[which(grepl(list_of_conditions[l],doublet_count_summary_file$File, fixed = TRUE) == TRUE),]
+                            sub_file_dcsf<-sub_file_dcsf[,c("File","Dots","Doublets")]
+                            write.table(x=sub_file_dcsf,file=paste0("DCSF_",list_of_conditions[l],".csv"),row.names = FALSE,col.names = TRUE)
+                            condition_files<-list.files(pattern=list_of_conditions[l])
+                            condition_files<-condition_files[condition_files != folder_name]
+                            fs::file_move(path=condition_files,new_path=paste0("./",folder_name))
+                            }
+                        download_files <- list.dirs(recursive=FALSE)
+                        download_files<-download_files[download_files != "./rsconnect"]
+                        download_files <- c(download_files,list.files(pattern=".xlsx"))
+                        download_files <- c(download_files,list.files(pattern=".csv"))
+                        }
                     zip(con, download_files)}
         ,contentType = "application/zip"
     )
