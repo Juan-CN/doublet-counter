@@ -1,5 +1,7 @@
 Alternative Two Part Procedure
 
+* Let each part run to completion.
+
 Part One: 
 
 ImageJ Results.csv file creation via two-part-macro.ijm 
