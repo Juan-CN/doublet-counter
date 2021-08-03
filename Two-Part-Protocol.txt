@@ -2,6 +2,13 @@ Alternative Two Part Procedure
 
 * Let each part run to completion.
 
+
+
+For Real Data
+-------------
+
+
+
 Part One: 
 
 ImageJ Results.csv file creation via two-part-macro.ijm 
@@ -41,3 +48,74 @@ Notice that these two keywords are separated from each other by the delimiter ",
 (keyword1, keyword2)
 
 Please use the delimiter shown above, otherwise your folders will not have the proper names and will not contain organized files.
+
+6. Download Analysis Files using button.
+
+
+
+For Synthetic Image Generation / Synthetic Data Analysis
+--------------------------------------------------------
+
+Part One:
+
+Synthetic Image Generation
+
+1. Specify the desired dot number sequence. For example: "25, 500, 25" creates images with 25, 50, 75 , 100 dots and so on.
+
+Notice that these are separated from each other by the delimiter ", " (comma followed by a space).
+
+(number1, number2)
+
+Please use the delimiter as shown above.
+
+2. Specify how many images to create per dot number set. For example, create 100 images of 25 dots per images, 50 dots per image and so on as specified by dot number sequence above.
+
+3. Specify Image Dimensions. This generator operates on the assumption that you wish to produce square (same width and height) images, such as 512 X 512.
+
+4. Specify Dot Sizes (a sequence). For example, "1, 2" only creates dots of sizes 1 and 2, whereas "1, 25" creates dots of all sizes in the range from 1,2,3,4,5 to 25.
+
+Notice that these are separated from each other by the delimiter ", " (comma followed by a space).
+
+(number1, number2)
+
+Please use the delimiter as shown above.
+
+5. Specify Dot Size Probability Distribution (Default or Custom). For purposes of the Serbus lab, we have specified our default probabilities for size ranges 1-25 and 1-2, but you may wish to use another size and range and correspondingly a different set of dot size probabilities. If your size range is "1, 3", you should upload a .csv probability file that contains three such probabilities, such as (0.3, 0.3, 0.3) all in one column.
+
+6. Choose Cell Type to Emulate. Ex: This emulation is based on the idea of a canvas which represents the image of dimensions 512 X 512. The program then allows only a part of the total area to be used for plotting synthetic dots.
+Nurse = fruit fly nurse cell, based on area occupied by typical nurse cells from confocal microscopy images. Area: 34% filled, Margin: 175, Resulting Synthetic Image Dimensions: 175 X 512
+Oocyte = fruit fly oocyte, based on area occupied by typical oocytes from confocal microscopy images. Area: 28% filled, Margin: 144, Resulting Synthetic Image Dimensions: 144 X 512
+Other = your choice of margin, Resulting Synthetic Image Dimensions: Custom_Margin X 512
+
+7. Click create Synthetic Images Button to begin generating. Once this is complete. Click Download Synthetic Image Files Button
+
+8. Open the downloaded Zip file that contains the synthetic images. Run them through the macro which creates a Results.csv file. (Below procedure)
+
+ImageJ Results.csv file creation via two-part-macro.ijm 
+-------------------------------------------------------
+1. Download ImageJ at https://imagej.nih.gov/ij/download.html
+
+2. Open ImageJ. In its menu atop your screen, select Plugins, select Macros, select Run.
+
+3. In the first window that opens, first select your macro (two-part-macro.ijm) and click open.
+In the second window that opens, select the folder which contains only the images you wish to analyze,
+and click open.
+
+4. Once the Results window opens, return to the ImageJ menu atop your screen and select File, select Save as, call the file Results.csv and place it in the same directory as your images.
+
+5. Close the Results and ImageJ windows.
+
+6. Open Results.csv file and inspect it. If the column headings do not match the data below them, adjust them accordingly. Delete the first column (numbers 1, 2, 3, etc.) in an editor such as Excel or Libreoffice, and save the file as "Results.csv"
+--------------------------------------------------------
+
+9. Decide whether to create image summary plots with doublets labeled and overlaid on the thresholded images.
+
+10. Set a custom threshold value or leave as is (use the default distance 4).
+
+11. Choose and upload the Results.csv file created in Part One.
+
+12. Download Analysis Files using button.
+
+
+
+
