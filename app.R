@@ -204,7 +204,7 @@ server <- shinyServer(function(input, output) {
                                      store_Results_input_on_disk_and_read_into_mem <- function() {
                                          file.copy(from = input$results_csv_file$datapath,to="Results.csv", overwrite = TRUE);
                                          Results<<-read.table(file = "Results.csv", header = TRUE, sep = ",", dec = ".");
-                                         openxlsx::write.xlsx(x=Results,file="Results.xlsx",col.names = TRUE,row.names = FALSE)
+                                         openxlsx::write.xlsx(x=Results,file="Results.xlsx",colNames = TRUE,rowNames = FALSE)
                                      };
                                      store_Results_input_on_disk_and_read_into_mem();
 
@@ -234,6 +234,7 @@ server <- shinyServer(function(input, output) {
                                              directory<-getwd();
                                              files<-list.files(path = directory, pattern = ".csv");
                                              files<-files[files != "Results.csv"];
+                                             files<-files[files != "Prob_Dist_File.csv"];
                                              files<<-sort(files);
                                              return(files)
                                          }
@@ -428,7 +429,7 @@ server <- shinyServer(function(input, output) {
                                                                  assign_values3 <- function() {
                                                                      neighbor_coords2<<-neighbor_coords2[1:dim(neighbor_coords2)[1],];
                                                                      write.table(x=neighbor_coords2,file=paste0("Neighb_Coords_2_",sub(x=files[x],pattern="_coords.csv",replacement=""),".csv"))
-                                                                     openxlsx::write.xlsx(x=neighbor_coords2,file=paste0("Neighb_Coords_2_",sub(x=files[x],pattern="_coords.csv",replacement=""),".xlsx"),col.names=TRUE,row.names=FALSE)
+                                                                     openxlsx::write.xlsx(x=neighbor_coords2,file=paste0("Neighb_Coords_2_",sub(x=files[x],pattern="_coords.csv",replacement=""),".xlsx"),colNames=TRUE,rowNames=FALSE)
                                                                      cat(file=stderr(),"Neighbor_Coords2, Dim","\n");
                                                                      neighbor_distances2<<-pointDistance(p1=neighbor_coords2,lonlat=FALSE);
                                                                      neighbor_distances2[neighbor_distances2 == 0]<-NA ;
@@ -596,7 +597,7 @@ server <- shinyServer(function(input, output) {
                                          data_table<-data.frame(files,number1,number2,number3,number4,number5)
                                          names(data_table)<-c("File","Dots","Neighbors","Doublets","Large_Blobs","Dist_Multiples")
                                          write.csv2(x=data_table,file=paste0("Doublet_Count_Summary",".csv"))
-                                         openxlsx::write.xlsx(x=data_table,file="Doublet_Count_Summary.xlsx",col.names = TRUE,row.names = FALSE)
+                                         openxlsx::write.xlsx(x=data_table,file="Doublet_Count_Summary.xlsx",colNames = TRUE,rowNames = FALSE)
                                          doublet_count_file<-read.csv2(file="Doublet_Count_Summary.csv",header=TRUE)
                                          sum_Dots<-sum(doublet_count_file$Dots)
                                          sum_Neighbors<-sum(doublet_count_file$Neighbors)
@@ -611,11 +612,146 @@ server <- shinyServer(function(input, output) {
                                          colnames(sums)<-c("Sum_of_Dots","Sum_of_Neighbors","Sum_of_Doublets","Sum_of_Area_Multiples","Sum_of_Dist_Multiples")
                                          #
                                          write.table(x=sums,file="Totals.csv",row.names=FALSE,col.names=TRUE)
-                                         openxlsx::write.xlsx(x=sums,file="Totals.xlsx",col.names = TRUE,row.names = FALSE)
+                                         openxlsx::write.xlsx(x=sums,file="Totals.xlsx",colNames = TRUE,rowNames = FALSE)
 
                                      };
                                      count_doublets();
                                      cat(file=stderr(),"Doublets counted","\n");
+                                     create_combined_summary_file <- function(){
+                                         cat(file=stderr(),"Creating Combined Summary File","\n");
+                                         real_nurse_data <<- read.csv2(file="Doublet_Count_Summary.csv",header=TRUE)
+                                         real_nurse_Results <<- Results #read.csv2(file="Results.csv",header=TRUE,sep=",")
+
+                                         #correct_dcsf_names <- sub(x=real_nurse_data$File,pattern = "_coords.csv",replacement = ".tif")
+                                         correct_dcsf_names <<- sub(x=real_nurse_data$File,pattern = "_coords.csv",replacement = "")
+
+                                         sorted_files_Results <<- sort(unique(real_nurse_Results$Filename))
+                                         sorted_files_Results_no_ext <<- sub(x=sort(unique(real_nurse_Results$Filename)),pattern=".tif",replacement = "")
+
+
+                                         length(correct_dcsf_names) # 994
+                                         length(sorted_files_Results) # 994
+
+                                         areas_list <<- list()
+                                         e <- NULL
+                                         list_placeholder <- NULL
+                                         for(e in 1:length(sorted_files_Results)){
+                                             #print(e)
+                                             list_placeholder <- list(Results$Area[which(sub(x=sort(Results$Filename),pattern=".tif",replacement = "") == sorted_files_Results_no_ext[e])])
+                                             areas_list <<- c(areas_list,list_placeholder)
+                                         }
+
+                                         # areas_list <<- list()
+                                         # e <- NULL
+                                         # list_placeholder <- NULL
+                                         # for(e in 1:length(sorted_files_Results)){
+                                         #     #print(e)
+                                         #     list_placeholder <- list(Results$Area[which(Results$Filename == sorted_files_Results[e])])
+                                         #     areas_list <<- c(areas_list,list_placeholder)
+                                         # }
+
+                                         areas_vector <<- sapply(X=areas_list,FUN = length)
+
+                                         w <- NULL
+                                         dot_read_column <- NULL
+                                         neighbors_found_column <- NULL
+                                         doublets_found_column <- NULL
+                                         large_blobs_found_column <- NULL
+                                         dist_mult_found_column <- NULL
+                                         for (w in 1:length(areas_vector)){
+                                             print(w)
+                                             dot_value_vec <- rep(x=real_nurse_data$Dots[which(correct_dcsf_names == sorted_files_Results_no_ext[w])],each=areas_vector[w])
+                                             neighbor_value <- rep(x=real_nurse_data$Neighbors[which(correct_dcsf_names == sorted_files_Results_no_ext[w])],each=areas_vector[w])
+                                             doublet_value <- rep(x=real_nurse_data$Doublets[which(correct_dcsf_names == sorted_files_Results_no_ext[w])],each=areas_vector[w])
+                                             lblob_value <- rep(x=real_nurse_data$Large_Blobs[which(correct_dcsf_names == sorted_files_Results_no_ext[w])],each=areas_vector[w])
+                                             dmult_value <- rep(x=real_nurse_data$Dist_Multiples[which(correct_dcsf_names == sorted_files_Results_no_ext[w])],each=areas_vector[w])
+
+                                             dot_read_column <- c(dot_read_column, dot_value_vec)
+                                             neighbors_found_column <- c(neighbors_found_column, neighbor_value)
+                                             doublets_found_column <- c(doublets_found_column, doublet_value)
+                                             large_blobs_found_column <- c(large_blobs_found_column, lblob_value)
+                                             dist_mult_found_column <- c(dist_mult_found_column, dmult_value)
+                                         }
+
+                                         real_combined_summary_file <- data.frame(cbind(sort(real_nurse_Results$Filename),as.numeric(real_nurse_Results$Area),as.numeric(dot_read_column),
+                                                                                        as.numeric(neighbors_found_column),as.numeric(doublets_found_column),
+                                                                                        as.numeric(large_blobs_found_column),as.numeric(dist_mult_found_column)))
+                                         names(real_combined_summary_file) <- c("File_Name","Dot_Area","Dots_Read","Neighbors_Read","Doublets_Read","LBlobs_Read","DMult_Read")
+
+                                         write.csv2(real_combined_summary_file,file="Combined_Summary_File.csv",sep = ",",dec=".",row.names = FALSE)
+                                         write.xlsx(real_combined_summary_file,file="Combined_Summary_File.xlsx")
+                                     }
+                                     create_combined_summary_file()
+                                     cat(file=stderr(),"CSF counted","\n");
+                                     combined_data <- read.csv2("Combined_Summary_File.csv")
+                                     aggregate_area_ranges <- function(data_var,label){
+                                         #for (t in length(table(cut(sizes_1_25$Dots_Read, breaks=seq(0, 1000, 100))))){
+                                         for (t in 1:length(table(cut(data_var$Dots_Read, breaks=seq(0, 1000, 100))))){
+                                             #print(t)
+                                             end_1 <- seq(100,1000,100)
+                                             begin <- seq(0,900,100)
+                                             area_range_array <- NULL
+                                             #area_ranges <- sizes_1_25$Dot_Area[sizes_1_25$Dots_Read <= end[t] & sizes_1_25$Dots_Read > begin[t]]
+                                             area_ranges <- data_var$Dot_Area[data_var$Dots_Read <= end_1[t] & data_var$Dots_Read > begin[t]]
+                                             area_range_array <- c(area_range_array, area_ranges)
+                                             write.csv(area_range_array,file=paste0("Areas_Range_",begin[t],'_',end_1[t],"_",label,".csv"),row.names = FALSE)
+                                             area_range_array <- NULL
+                                             area_ranges <- NULL
+                                         }
+                                     }
+                                     aggregate_area_ranges(data_var = combined_data,label = "Real_Data")
+                                     if(input$organize_or_not == 'n'){
+                                         # simple_organize <- function(){
+                                         #     cat(file=stderr(),"Simple File Organize","\n")
+                                         #     fs::dir_create("Area-Ranges-folder")
+                                         #     fs::dir_create("Coords_from_Results-folder")
+                                         #     fs::dir_create("Neighbor_Coords_2-folder")
+                                         #     fs::dir_create("Doublets_Plotted-folder")
+                                         #     fs::dir_create("Large_Blobs_Dist_Multiples_Plotted-folder")
+                                         #
+                                         #     f <- NULL
+                                         #     Area_Files_Vec <- list.files(pattern = "Areas_Range_")
+                                         #     for (f in 1:length(Area_Files_Vec)){
+                                         #
+                                         #         fs::file_move(path = Area_Files_Vec[f],
+                                         #                       new_path = paste0("./Area-Ranges-folder/",Area_Files_Vec[f]))
+                                         #     }
+                                         #
+                                         #
+                                         #     f <- NULL
+                                         #     Coords_Files_Vec <- list.files(pattern = "_coords.csv")
+                                         #     for (f in 1:length(Coords_Files_Vec)){
+                                         #         fs::file_move(path = Coords_Files_Vec[f],
+                                         #                       new_path = paste0("./Coords_from_Results-folder/",Coords_Files_Vec[f]))
+                                         #     }
+                                         #
+                                         #     f <- NULL
+                                         #     Neighbor_Coords_Files_Vec <- list.files(pattern = "Neighb_Coords_2_")
+                                         #     for (f in 1:length(Neighbor_Coords_Files_Vec)){
+                                         #         fs::file_move(path = Neighbor_Coords_Files_Vec[f],
+                                         #                       new_path = paste0("./Neighbor_Coords_2-folder/",Neighbor_Coords_Files_Vec[f]))
+                                         #     }
+                                         #
+                                         #
+                                         #     f <- NULL
+                                         #     Doublets_Plotted_Files_Vec <- list.files(pattern = "Doublets_Plotted_")
+                                         #     for (f in 1:length(list.files(pattern = "Doublets_Plotted_"))){
+                                         #         fs::file_move(path = Doublets_Plotted_Files_Vec[f],
+                                         #                       new_path = paste0("./Doublets_Plotted-folder/",Doublets_Plotted_Files_Vec[f]))
+                                         #     }
+                                         #
+                                         #
+                                         #     f <- NULL
+                                         #     Large_Blobs_Dist_Multiples_Plotted_Files_Vec <- list.files(pattern = "Large_Blobs_Dist_Multiples_Plotted_")
+                                         #     for (f in 1:length(Large_Blobs_Dist_Multiples_Plotted_Files_Vec)){
+                                         #         fs::file_move(path = Large_Blobs_Dist_Multiples_Plotted_Files_Vec[f],
+                                         #                       new_path = paste0("./Large_Blobs_Dist_Multiples_Plotted-folder/",Large_Blobs_Dist_Multiples_Plotted_Files_Vec[f]))
+                                         #     }
+                                         #
+                                         # }
+                                         #simple_organize()
+                                     }
+
                                  }
                     )
                 }
@@ -649,7 +785,7 @@ server <- shinyServer(function(input, output) {
                         sums<-matrix(sums,ncol=3)
                         colnames(sums)<-c("Sum of Dots","Sum of Neighbors","Sum of Doublets")
                         write.table(x=sums,file=paste0("Totals_","DCSF_",list_of_conditions[l],".csv"),row.names=FALSE,col.names=TRUE)
-                        openxlsx::write.xlsx(x=sums,file=paste0("Totals_","DCSF_",list_of_conditions[l],".xlsx"),col.names = TRUE,row.names = FALSE)
+                        openxlsx::write.xlsx(x=sums,file=paste0("Totals_","DCSF_",list_of_conditions[l],".xlsx"),colNames = TRUE,rowNames = FALSE)
                         # Produce a Total for each condition nurse # and oocyte # from DCSF file
                         # Calculate ratio = sum(doublets) / sum(dots)
                         #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -861,22 +997,14 @@ server <- shinyServer(function(input, output) {
                         if(input$dot_sizes == "1, 2"){
                             prob_dist <<- c(0.5,0.5)
                         }
-                        ##########
-                        # if(input$dot_sizes != "1, 25" | input$dot_sizes != "1,2"){
-                        #     store_prob_dist_file_input_on_disk_and_read_into_mem <- function() {
-                        #         file.copy(from = input$prob_dist_file_input$datapath,to="Prob_Dist_File.csv", overwrite = TRUE);
-                        #         prob_dist_file<<-read.table(file = "Prob_Dist_File.csv", header = TRUE, sep = ",", dec = ".");
-                        #         openxlsx::write.xlsx(x=Results,file="Prob_Dist_File.xlsx",col.names = TRUE,row.names = FALSE)
-                        #     };
-                        #     store_prob_dist_file_input_on_disk_and_read_into_mem();
-                        #
-                        # }
+
+
                         if(is.null(input$prob_dist_file_input)==FALSE){
                             store_prob_dist_file_input_on_disk_and_read_into_mem <- function() {
                                 file.copy(from = input$prob_dist_file_input$datapath,to="Prob_Dist_File.csv", overwrite = TRUE);
                                 prob_dist_file<<-read.table(file = "Prob_Dist_File.csv", header = TRUE, sep = ",", dec = ".");
                                 #write.csv(prob_dist_file,)
-                                openxlsx::write.xlsx(x=prob_dist_file,file="Prob_Dist_File.xlsx",col.names = TRUE,row.names = FALSE)
+                                openxlsx::write.xlsx(x=prob_dist_file,file="Prob_Dist_File.xlsx",colNames = TRUE,rowNames = FALSE)
                             };
                             store_prob_dist_file_input_on_disk_and_read_into_mem();
                             prob_dist <<- prob_dist_file[,1]
@@ -915,15 +1043,15 @@ server <- shinyServer(function(input, output) {
                                 y <- sample(x=1:img_dim,size=number_dots,replace=TRUE)
                                 x_y_points <- matrix(data=c(x,y),ncol=2)
                                 number_of_points <- nrow(unique(x_y_points))
-                                #print(paste0("Num_Dots: ",number_of_points))
                             }
                             n <- as.numeric(image_num)
-                            #file_number <- sample(x=1:500000000,size=1,replace=FALSE)
-                            file_name <- paste0("Number_Dots_",number_dots,"_synth_",cell_type,"_image-",n)
+                            # ADD Pad to Filename
+                            stringr::str_pad(string=number_dots,width=max(nchar(max(dot_seq_vec))),pad = "0")
 
-                            #file_name <- paste0(number_dots,"_synth_image_",)#,"_image",n)
+                            file_name <- paste0(stringr::str_pad(string=number_dots,width=max(nchar(max(dot_seq_vec))),pad = "0"), "__","Number-Dots-","synth-",cell_type,"-image-",n)
 
-                            pdf(file=paste0(file_name,".pdf"))
+
+                            tiff(filename = paste0(file_name,".tiff"),width=img_dim,height=img_dim)
                             par(bg="black")
                             plot(x_y_points,col="white",pch=20,cex=size/10,xlim=c(1,img_dim),ylim=c(img_dim,1))
                             dev.off()
@@ -938,12 +1066,6 @@ server <- shinyServer(function(input, output) {
                                     plot_dot_cloud_reduced_margin_true_area_size_replacement_unique(number_of_dots=number_of_dots_input[f],margin=175,sizes=dot_size_vec,dims_image=input$image_dim,image_num=i,cell_type = "nurse")
                                 }
                             }
-                            for(i in 1:length(list.files(pattern=".pdf"))){
-                                pdftools::pdf_convert(pdf = list.files(pattern=".pdf")[i],format = "tiff")
-                            }
-                            unlink(x = list.files(pattern = ".pdf"))
-                            fs::file_copy(path=list.files(pattern=".tiff"),new_path = sub(list.files(pattern=".tiff"),pattern = "_1.tiff",replacement = ".tiff"))
-                            unlink(x = list.files(pattern = "_1.tiff"))
                         }
                         if(input$cell_type == "Oocyte"){
                             for (f in 1:length(number_of_dots_input)) {
@@ -951,25 +1073,13 @@ server <- shinyServer(function(input, output) {
                                     plot_dot_cloud_reduced_margin_true_area_size_replacement_unique(number_of_dots=number_of_dots_input[f],margin=144,sizes=dot_size_vec,dims_image=input$image_dim,image_num=i,cell_type = "oocyte")
                                 }
                             }
-                            for(i in 1:length(list.files(pattern=".pdf"))){
-                                pdftools::pdf_convert(pdf = list.files(pattern=".pdf")[i],format = "tiff")
-                            }
-                            unlink(x = list.files(pattern = ".pdf"))
-                            fs::file_copy(path=list.files(pattern=".tiff"),new_path = sub(list.files(pattern=".tiff"),pattern = "_1.tiff",replacement = ".tiff"))
-                            unlink(x = list.files(pattern = "_1.tiff"))
                         }
                         if(input$cell_type == "Other"){
                             for (f in 1:length(number_of_dots_input)) {
                                 for (i in 1:(as.numeric(input$number_of_images))){
-                                    plot_dot_cloud_reduced_margin_true_area_size_replacement_unique(number_of_dots=number_of_dots_input[f],margin=as.numeric(input$custom_margin_value),sizes=dot_size_vec,dims_image=input$image_dim,image_num=i,cell_type = "nurse")
+                                    plot_dot_cloud_reduced_margin_true_area_size_replacement_unique(number_of_dots=number_of_dots_input[f],margin=as.numeric(input$custom_margin_value),sizes=dot_size_vec,dims_image=input$image_dim,image_num=i,cell_type = "other")
                                 }
                             }
-                            for(i in 1:length(list.files(pattern=".pdf"))){
-                                pdftools::pdf_convert(pdf = list.files(pattern=".pdf")[i],format = "tiff")
-                            }
-                            unlink(x = list.files(pattern = ".pdf"))
-                            fs::file_copy(path=list.files(pattern=".tiff"),new_path = sub(list.files(pattern=".tiff"),pattern = "_1.tiff",replacement = ".tiff"))
-                            unlink(x = list.files(pattern = "_1.tiff"))
                         }
 
                     }
@@ -991,9 +1101,6 @@ server <- shinyServer(function(input, output) {
                     download_files <- list.dirs(recursive=FALSE)
                     download_files <- download_files[download_files != "./rsconnect"]
                     download_files <- c(download_files,list.files(pattern=".tif"))
-                    #download_files <- c(download_files,list.files(pattern=".csv"))
-                    #download_files <- c(download_files,list.files(pattern=".pdf"))
-                    #download_files <- c(download_files,list.files(pattern=".eps"))
                     zip(zipfile = con, files = download_files)},
                 contentType = "application/zip")
             # Carry out the Analysis
@@ -1002,17 +1109,16 @@ server <- shinyServer(function(input, output) {
                     withProgress(message = "Obtaining coordinates from Results.csv", min = 0, max = 1, style = "old", value = 0,
                                  expr = {
                                      req(input$results_csv_file_2);
-                                     #req(Results);
+
 
                                      store_Results_input_on_disk_and_read_into_mem <- function() {
                                          file.copy(from = input$results_csv_file_2$datapath,to="Results.csv", overwrite = TRUE);
                                          Results<<-read.table(file = "Results.csv", header = TRUE, sep = ",", dec = ".");
-                                         openxlsx::write.xlsx(x=Results,file="Results.xlsx",col.names = TRUE,row.names = FALSE)
+                                         openxlsx::write.xlsx(x=Results,file="Results.xlsx",colNames = TRUE,rowNames = FALSE)
                                      };
                                      store_Results_input_on_disk_and_read_into_mem();
 
                                      extract_coordinates_from_Results_to_files<-function() {
-                                         #Results<<-Results[,c("X","Y","Filename")]
                                          Results<<-Results[,c("Area","X","Y","Filename")]
                                          file_names<<-unique(Results$Filename)
                                          files<<-paste0(sub(file_names,
@@ -1069,15 +1175,12 @@ server <- shinyServer(function(input, output) {
                                          for (x in seq_along(files)){
                                              cat(file=stderr(),"Analysis in progress","\n");
                                              print(x);
-                                             print(files[x]) #cat(file=stderr(),print(file[x]))
+                                             print(files[x])
                                              incProgress(amount=(1/(x*1000)),message="Calculating doublets...");
                                              data_coords<<-read.table(file = files[x], header = TRUE, dec = ".");
-                                             #data_coords<<-data_coords[,c("X","Y")];
                                              data_coords<<-data_coords[,c("Area","X","Y")];
                                              coord_mat2<<-data_coords[c("X","Y")]
-                                             #
                                              possible_multiple_coords<<-data_coords[c("X","Y")][which(data_coords$Area > area_val),]
-                                             #num_area_multiples <<- nrow(possible_multiple_coords)
                                              # Doublet dots in line below
                                              data_coords<<-data_coords[c("X","Y")][which(data_coords$Area<=area_val),]
 
@@ -1086,11 +1189,8 @@ server <- shinyServer(function(input, output) {
                                                      dots<<-dim(coord_mat2)[1];
                                                      num_neighbors<<-0;
                                                      doublets<<-0;
-                                                     #
                                                      num_area_multiples <<- nrow(possible_multiple_coords);
                                                      num_dist_multiples <<- 0
-
-                                                     #
                                                      number1<<-append(x=number1,values=dots);
                                                      number2<<-append(x=number2,values=num_neighbors);
                                                      number3<<-append(x=number3,values=doublets);
@@ -1180,7 +1280,7 @@ server <- shinyServer(function(input, output) {
 
                                                                      #
                                                                      neighbors_not_doublets <<- dplyr::anti_join(data.frame(neighbor_coords),data.frame(neighbor_coords2))
-                                                                     if (all(is.na(neighbors_not_doublets)) == "TRUE"){
+                                                                     if (all(is.na(neighbors_not_doublets)) == "TRUE" | nrow(neighbors_not_doublets) == 1){
                                                                          assign_values5 <- function(){
                                                                              num_dist_multiples <<- 0
                                                                              number5<<-append(x=number5,values=num_dist_multiples)
@@ -1217,7 +1317,7 @@ server <- shinyServer(function(input, output) {
                                                                  assign_values3 <- function() {
                                                                      neighbor_coords2<<-neighbor_coords2[1:dim(neighbor_coords2)[1],];
                                                                      write.table(x=neighbor_coords2,file=paste0("Neighb_Coords_2_",sub(x=files[x],pattern="_coords.csv",replacement=""),".csv"))
-                                                                     openxlsx::write.xlsx(x=neighbor_coords2,file=paste0("Neighb_Coords_2_",sub(x=files[x],pattern="_coords.csv",replacement=""),".xlsx"),col.names=TRUE,row.names=FALSE)
+                                                                     openxlsx::write.xlsx(x=neighbor_coords2,file=paste0("Neighb_Coords_2_",sub(x=files[x],pattern="_coords.csv",replacement=""),".xlsx"),colNames=TRUE,rowNames=FALSE)
                                                                      cat(file=stderr(),"Neighbor_Coords2, Dim","\n");
                                                                      neighbor_distances2<<-pointDistance(p1=neighbor_coords2,lonlat=FALSE);
                                                                      neighbor_distances2[neighbor_distances2 == 0]<-NA ;
@@ -1229,7 +1329,7 @@ server <- shinyServer(function(input, output) {
 
                                                                      #
                                                                      neighbors_not_doublets <<- dplyr::anti_join(data.frame(neighbor_coords),data.frame(neighbor_coords2))
-                                                                     if (all(is.na(neighbors_not_doublets)) == "TRUE"){
+                                                                     if (all(is.na(neighbors_not_doublets)) == "TRUE" | nrow(neighbors_not_doublets) == 1){
                                                                          assign_values5 <- function(){
                                                                              num_dist_multiples <<- 0
                                                                              number5<<-append(x=number5,values=num_dist_multiples)
@@ -1385,7 +1485,7 @@ server <- shinyServer(function(input, output) {
                                          data_table<-data.frame(files,number1,number2,number3,number4,number5)
                                          names(data_table)<-c("File","Dots","Neighbors","Doublets","Large_Blobs","Dist_Multiples")
                                          write.csv2(x=data_table,file=paste0("Doublet_Count_Summary",".csv"))
-                                         openxlsx::write.xlsx(x=data_table,file="Doublet_Count_Summary.xlsx",col.names = TRUE,row.names = FALSE)
+                                         openxlsx::write.xlsx(x=data_table,file="Doublet_Count_Summary.xlsx",colNames = TRUE,rowNames = FALSE)
                                          doublet_count_file<<-read.csv2(file="Doublet_Count_Summary.csv",header=TRUE)
                                          sum_Dots<-sum(doublet_count_file$Dots)
                                          sum_Neighbors<-sum(doublet_count_file$Neighbors)
@@ -1400,130 +1500,188 @@ server <- shinyServer(function(input, output) {
                                          colnames(sums)<-c("Sum_of_Dots","Sum_of_Neighbors","Sum_of_Doublets","Sum_of_Area_Multiples","Sum_of_Dist_Multiples")
                                          #
                                          write.table(x=sums,file="Totals.csv",row.names=FALSE,col.names=TRUE)
-                                         openxlsx::write.xlsx(x=sums,file="Totals.xlsx",col.names = TRUE,row.names = FALSE)
+                                         openxlsx::write.xlsx(x=sums,file="Totals.xlsx",colNames = TRUE,rowNames = FALSE)
 
                                      };
                                      count_doublets();
                                      cat(file=stderr(),"Doublets counted","\n");
 
-                                     create_combined_summary_file <- function(){
-                                         req(Results)
+                                     create_combined_summary_file_synth <- function(){
 
-                                         unpadded_file_names <<- sort(unique(Results$Filename))
-                                         cat(file=stderr(),"UNPFN","\n")
+                                         Results <<- read.csv2(file="Results.csv",header=TRUE,sep=",")
 
-                                         unpadded_strings <<- NULL
-                                         s <- NULL
-                                         for (s in 1:length(sort(unique(Results$Filename)))){
-                                             #string <- stringr::str_split(string = sort(unique(Results$Filename)),pattern = "Number_Dots_")[[s]][2]
-                                             string <- stringr::str_split(string = unpadded_file_names,pattern = "Number_Dots_")[[s]][2]
-                                             unpadded_strings <- c(unpadded_strings, string)
+                                         DCSF <<- read.csv2(file="Doublet_Count_Summary.csv",header=TRUE)
+
+                                         no_ext_dcsf_names <<- sub(x=Results$File,pattern = "_coords.csv",replacement = "")
+
+                                         Results_files <<- unique(Results$Filename)
+
+                                         # Split to find Dots Plotted from Synth Filename
+
+                                         split_list <<- stringr::str_split(string=Results_files,pattern="__")
+                                         split_list_numbers <<- NULL
+                                         for (l in 1:length(split_list)){
+                                         split_list_num <- split_list[[l]][1]
+                                         split_list_numbers <<- c(split_list_numbers,split_list_num)
                                          }
-                                         cat(file=stderr(),"UNPS","\n")
+                                         dots_plotted <<- as.numeric(str_remove(split_list_numbers, "^0+"))
 
-                                         #stringr::str_split(string = sort(unique(Results$Filename)),pattern = "Number_Dots_")[[s]]
-                                         #unlist(stringr::str_split(string = sort(unique(Results$Filename)),pattern = "Number_Dots_"))
+                                         # Find out how many areas per dot plot number
 
-                                         #stringr::str_pad(string=unpadded_strings,width=max(nchar(unpadded_strings)),pad = "0")
-                                         padded_strings <<- sort(stringr::str_pad(string=unpadded_strings,width=max(nchar(unpadded_strings)),pad = "0"))
-                                         cat(file=stderr(),"PS","\n")
-
-                                         #full_width_padded <<- str_pad(string=padded_strings,side="left",pad="_",width=max(nchar(paste0("Number_Dots_",padded_strings[1:length(sort(unique(Results$Filename)))]))))
-                                         full_width_padded <<- str_pad(string=padded_strings,side="left",pad="_",width=max(nchar(paste0("Number_Dots_",padded_strings[1:length(unpadded_file_names)]))))
-
-                                         cat(file=stderr(),"FWPS","\n")
-
-                                         ordered_full_width_padded_strings <<- str_replace(string=full_width_padded,pattern="____________",replacement = "Number_Dots_")
-                                         cat(file=stderr(),"OFWPS","\n")
-
-                                         pad_size <<- nchar(max(dot_seq_vec)) - nchar(min(dot_seq_vec))
-                                         max_pad <<- paste0("_",as.character(stringr::str_dup("0",times=pad_size)))
-                                         ordered_Results_FileNames <<- sub(x=ordered_full_width_padded_strings,pattern=max_pad,replacement="_")
-                                         for (p in 1:(pad_size)){
-                                             print(p)
-                                             pad <<- paste0("_",as.character(stringr::str_dup("0",times=p)))
-                                             ordered_Results_FileNames <<- sub(x=ordered_Results_FileNames,pattern=pad,replacement="_")
-                                         }
-                                         # ordered_Results_FileNames <<- sub(x=ordered_full_width_padded_strings,pattern="_0",replacement="_")
-                                         # cat(file=stderr(),"ORFN","\n")
-
-                                         # create_areas_list <- function(){
-                                         #    areas_list <- list()
-                                         #    for(e in 1:length(ordered_Results_FileNames)){
-                                         #        list_placeholder <- list(Results$Area[which(Results$Filename == ordered_Results_FileNames[e])])
-                                         #        areas_list <- c(areas_list,list_placeholder)
-                                         #        cat(file=stderr(),"Areas_List Created","\n")
-                                         #    }
-                                         #    return(areas_list)
-                                         # }
-                                         # areas_list <- reactive(create_areas_list())
-
-                                         #areas_list <- create_areas_list()
                                          areas_list <<- list()
                                          e <- NULL
-                                         for(e in 1:length(ordered_Results_FileNames)){
-                                             list_placeholder <- list(Results$Area[which(Results$Filename == ordered_Results_FileNames[e])])
+                                         list_placeholder <- NULL
+                                         for(e in 1:length(Results_files)){
+                                             print(e)
+                                             list_placeholder <- list(Results$Area[which(Results$Filename == Results_files[e])])
                                              areas_list <<- c(areas_list,list_placeholder)
                                          }
-
-                                         #areas_vector <<- unlist(lapply(X=areas_list,FUN = length))
                                          areas_vector <<- sapply(X=areas_list,FUN = length)
-                                         cat(file=stderr(),"Areas_List Created","\n")
 
-                                         repeated_ordered_full_width_padded_strings <<- NULL
-                                         w <- NULL
-                                         for (w in 1:length(ordered_full_width_padded_strings)){
-                                             #areas_vector
-                                             repeated_ordered_full_width_padded_string <- rep(x=ordered_full_width_padded_strings[w],times=areas_vector[w])
-                                             #repeated_ordered_full_width_padded_string <- rep(x=ordered_full_width_padded_strings[w],times=unlist(lapply(areas_list,FUN = length))[w])
-                                             repeated_ordered_full_width_padded_strings <- c(repeated_ordered_full_width_padded_strings, repeated_ordered_full_width_padded_string)
+
+
+                                         # Repeat File Names
+                                         repeated_file_names <<- NULL
+                                         for (w in 1:length(Results_files)){
+                                             repeated_file_name <- rep(x=Results_files[w],times=areas_vector[w])
+                                             repeated_file_names <<- c(repeated_file_names, repeated_file_name)
                                          }
-                                         cat(file=stderr(),"Areas_List 1 ROFWPS","\n")
-                                         #repeated_ordered_full_width_padded_strings <- sort(repeated_ordered_full_width_padded_strings)
-                                         #ordered_Results_FileNames <- sub(x=ordered_full_width_padded_strings,pattern="_0",replacement="_")
+                                         length(repeated_file_names)
 
-                                         numbers <<- NULL
-                                         q <- NULL
-                                         for(q in 1:length(unpadded_strings)){
-                                             number <- as.numeric(str_split(string = unpadded_strings,pattern="_synth")[[q]][1])
-                                             numbers <- c(numbers,number)
+                                         # Areas Column for Combined Summary File
+                                         areas_column <- unlist(areas_list)
+                                         length(areas_column)
+
+                                         # Repeat Dots Plotted
+                                         repeated_dots_plotted <<- NULL
+                                         for (w in 1:length(Results_files)){
+                                             repeated_dot_plot_vec <- rep(x=dots_plotted[w],times=areas_vector[w])
+                                             repeated_dots_plotted <<- c(repeated_dots_plotted, repeated_dot_plot_vec)
                                          }
+                                         length(repeated_dots_plotted)
 
-                                         repeated_numbers <<- NULL
-                                         r <- NULL
-                                         for(r in 1 : length(sort(numbers))){
-                                             number_vector <- as.numeric(rep(sort(numbers)[r],times=areas_vector[r]))
-                                             #number_vector <- as.numeric(rep(sort(numbers)[r],times=unlist(lapply(areas_list,FUN = length))[r]))
-                                             repeated_numbers <- c(repeated_numbers, number_vector)
+                                         # Repeat Dots Read
+                                         repeated_dots_read <<- NULL
+                                         for(w in 1:length(DCSF$File)){
+                                             repeated_dot_read_vec <- rep(x=DCSF$Dots[w],times=areas_vector[w])
+                                             repeated_dots_read <<- c(repeated_dots_read, repeated_dot_read_vec)
                                          }
-                                         cat(file=stderr(),"Areas_List 2 RN","\n")
-                                         sorted_repeated_numbers <<- sort(repeated_numbers)
+                                         length(repeated_dots_read)
 
-                                         unordered_dots <<- subset(doublet_count_file$Dots,doublet_count_file$File==sub(x = unpadded_file_names,pattern=".tiff",replacement = "_coords.csv"))
-                                         ordered_dots <<- unordered_dots[order(unordered_dots,ordered_full_width_padded_strings)]
-
-                                         repeated_ordered_dots <<- NULL
-                                         t <- NULL
-                                         for(t in 1:length(ordered_dots)){
-                                             dot_vector <<- rep(ordered_dots[t],times=areas_vector[t])
-                                             #dot_vector <<- rep(ordered_dots[t],times=unlist(lapply(areas_list,FUN = length))[t])
-                                             repeated_ordered_dots <<- c(repeated_ordered_dots,dot_vector)
+                                         # Repeat Neighbors Read
+                                         repeated_neighbors_read <<- NULL
+                                         for(w in 1:length(DCSF$File)){
+                                             repeated_neighbor_read_vec <- rep(x=DCSF$Neighbors[w],times=areas_vector[w])
+                                             repeated_neighbors_read <<- c(repeated_neighbors_read, repeated_neighbor_read_vec)
                                          }
-                                         cat(file=stderr(),"Areas_List 3 ROD","\n")
+                                         length(repeated_neighbors_read)
+
+                                         # Repeat Doublets Read
+                                         repeated_doublets_read <<- NULL
+                                         for(w in 1:length(DCSF$File)){
+                                             repeated_doublet_read_vec <- rep(x=DCSF$Doublets[w],times=areas_vector[w])
+                                             repeated_doublets_read <<- c(repeated_doublets_read, repeated_doublet_read_vec)
+                                         }
+                                         length(repeated_doublets_read)
+
+                                         # Repeat LBlobss Read
+                                         repeated_lblobs_read <<- NULL
+                                         for(w in 1:length(DCSF$File)){
+                                             repeated_lblob_read_vec <- rep(x=DCSF$Large_Blobs[w],times=areas_vector[w])
+                                             repeated_lblobs_read <<- c(repeated_lblobs_read, repeated_lblob_read_vec)
+                                         }
+                                         length(repeated_lblobs_read)
+
+                                         # Repeat DMult Read
+                                         repeated_dmults_read <<- NULL
+                                         for(w in 1:length(DCSF$File)){
+                                             repeated_dmult_read_vec <- rep(x=DCSF$Dist_Multiples[w],times=areas_vector[w])
+                                             repeated_dmults_read <<- c(repeated_dmults_read, repeated_dmult_read_vec)
+                                         }
+                                         length(repeated_dmults_read)
 
 
 
-                                         combined_summary_file <<- cbind(repeated_ordered_full_width_padded_strings,
-                                                                         as.numeric(sorted_repeated_numbers),
-                                                                         as.numeric(repeated_ordered_dots),
-                                                                         as.numeric(unlist(areas_list)))
-                                         combined_summary_file <<- data.frame(combined_summary_file)
-                                         names(combined_summary_file) <- c("File_Name","Dots_Plotted","Dots_Read","Dot_Area")
-                                         write.csv2(combined_summary_file,file="Combined_Summary_File.csv",sep = ",",dec=".",row.names = FALSE)
-                                         write.xlsx(combined_summary_file,file="Combined_Summary_File.xlsx")
+                                         real_combined_summary_file <<- data.frame(cbind(repeated_file_names,areas_column,repeated_dots_plotted,
+                                                                                         repeated_dots_read,repeated_neighbors_read,repeated_doublets_read,
+                                                                                         repeated_lblobs_read,repeated_dmults_read))
+
+                                         names(real_combined_summary_file) <- c("File_Name","Dot_Area","Dots_Plotted","Dots_Read","Neighbors_Read","Doublets_Read","LBlobs_Read","DMult_Read")
+                                         write.csv2(real_combined_summary_file,file="Combined_Summary_File.csv",sep = ",",dec=".",row.names = FALSE)
+                                         write.xlsx(real_combined_summary_file,file="Combined_Summary_File.xlsx")
+
                                      }
-                                     create_combined_summary_file()
+                                     create_combined_summary_file_synth()
+
                                      cat(file=stderr(),"CSF counted","\n");
+                                     combined_data <- read.csv2("Combined_Summary_File.csv")
+                                     aggregate_area_ranges <- function(data_var,label){
+                                         #for (t in length(table(cut(sizes_1_25$Dots_Read, breaks=seq(0, 1000, 100))))){
+                                         for (t in 1:length(table(cut(data_var$Dots_Read, breaks=seq(0, 1000, 100))))){
+                                             #print(t)
+                                             end_1 <- seq(100,1000,100)
+                                             begin <- seq(0,900,100)
+                                             area_range_array <- NULL
+                                             #area_ranges <- sizes_1_25$Dot_Area[sizes_1_25$Dots_Read <= end[t] & sizes_1_25$Dots_Read > begin[t]]
+                                             area_ranges <- data_var$Dot_Area[data_var$Dots_Read <= end_1[t] & data_var$Dots_Read > begin[t]]
+                                             area_range_array <- c(area_range_array, area_ranges)
+                                             write.csv(area_range_array,file=paste0("Areas_Range_",begin[t],'_',end_1[t],"_",label,".csv"),row.names = FALSE)
+                                             area_range_array <- NULL
+                                             area_ranges <- NULL
+                                         }
+                                     }
+                                     aggregate_area_ranges(data_var = combined_data,label="Synth")
+
+                                     # simple_organize <- function(){
+                                     #     cat(file=stderr(),"Simple File Organize","\n")
+                                     #     fs::dir_create("Area-Ranges-folder")
+                                     #     fs::dir_create("Coords_from_Results-folder")
+                                     #     fs::dir_create("Neighbor_Coords_2-folder")
+                                     #     fs::dir_create("Doublets_Plotted-folder")
+                                     #     fs::dir_create("Large_Blobs_Dist_Multiples_Plotted-folder")
+                                     #
+                                     #     f <- NULL
+                                     #     Area_Files_Vec <- list.files(pattern = "Areas_Range_")
+                                     #     for (f in 1:length(Area_Files_Vec)){
+                                     #
+                                     #         fs::file_move(path = Area_Files_Vec[f],
+                                     #                       new_path = paste0("./Area-Ranges-folder/",Area_Files_Vec[f]))
+                                     #     }
+                                     #
+                                     #
+                                     #     f <- NULL
+                                     #     Coords_Files_Vec <- list.files(pattern = "_coords.csv")
+                                     #     for (f in 1:length(Coords_Files_Vec)){
+                                     #         fs::file_move(path = Coords_Files_Vec[f],
+                                     #                       new_path = paste0("./Coords_from_Results-folder/",Coords_Files_Vec[f]))
+                                     #     }
+                                     #
+                                     #     f <- NULL
+                                     #     Neighbor_Coords_Files_Vec <- list.files(pattern = "Neighb_Coords_2_")
+                                     #     for (f in 1:length(Neighbor_Coords_Files_Vec)){
+                                     #         fs::file_move(path = Neighbor_Coords_Files_Vec[f],
+                                     #                       new_path = paste0("./Neighbor_Coords_2-folder/",Neighbor_Coords_Files_Vec[f]))
+                                     #     }
+                                     #
+                                     #
+                                     #     f <- NULL
+                                     #     Doublets_Plotted_Files_Vec <- list.files(pattern = "Doublets_Plotted_")
+                                     #     for (f in 1:length(list.files(pattern = "Doublets_Plotted_"))){
+                                     #         fs::file_move(path = Doublets_Plotted_Files_Vec[f],
+                                     #                       new_path = paste0("./Doublets_Plotted-folder/",Doublets_Plotted_Files_Vec[f]))
+                                     #     }
+                                     #
+                                     #
+                                     #     f <- NULL
+                                     #     Large_Blobs_Dist_Multiples_Plotted_Files_Vec <- list.files(pattern = "Large_Blobs_Dist_Multiples_Plotted_")
+                                     #     for (f in 1:length(Large_Blobs_Dist_Multiples_Plotted_Files_Vec)){
+                                     #         fs::file_move(path = Large_Blobs_Dist_Multiples_Plotted_Files_Vec[f],
+                                     #                       new_path = paste0("./Large_Blobs_Dist_Multiples_Plotted-folder/",Large_Blobs_Dist_Multiples_Plotted_Files_Vec[f]))
+                                     #     }
+                                     #
+                                     # }
+                                     #simple_organize()
+
 
                                  }
                     )
