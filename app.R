@@ -73,7 +73,6 @@ ui_function <- function(){ fluidPage(
                                        downloadButton(outputId = "analysis_files_download_button",
                                                       label = "5. Download Analysis Files")),
 
-                      #cat(file = stderr(), "UI created", "\n"),
                       conditionalPanel(condition = "input.real_data_synth_data_generation == 'Synth'",
                                        textInput(inputId = "dot_number_sequence",
                                                  label = "Dot Number Sequence: Beginning, End, Step_Size",
@@ -91,6 +90,10 @@ ui_function <- function(){ fluidPage(
                                                  label = "Dot Sizes Ex: 1-2, 1-9, 1-25 etc",
                                                  value="1, 9",
                                                  placeholder="1, 9"),
+                                       radioButtons(inputId = "dot_shape",
+                                                    label= "Dot Shapes",
+                                                    choices = c("Circle","Square","Triangle"),
+                                                    selected = "Triangle"),
                                        radioButtons(inputId = "custom_prob_file",
                                                     label = "Use Default Dot Size Probability Distribution or Custom Probability File (Not Yet!)",
                                                     choices = c("d","c"),
@@ -182,13 +185,6 @@ server <- shinyServer(function(input, output) {
             })
 
             # Show names of uploaded Image Files to User
-            #output$uploaded_image_files <- renderTable(striped = TRUE, bordered = TRUE, rownames = FALSE,colnames = TRUE,{
-            #     if (is.null(input$images_file_input) == FALSE) {
-            #         req(input$images_file_input$name);
-            #         Images<-input$images_file_input$name;
-            #         data.frame(Images)
-            #     }
-            # })
             output$uploaded_image_files <- renderDataTable(expr={
                 if (is.null(input$images_file_input) == FALSE) {
                     req(input$images_file_input$name);
@@ -212,7 +208,6 @@ server <- shinyServer(function(input, output) {
                                      store_Results_input_on_disk_and_read_into_mem();
 
                                      extract_coordinates_from_Results_to_files<-function() {
-                                         #Results<<-Results[,c("X","Y","Filename")]
                                          Results<<-Results[,c("Area","X","Y","Filename")]
                                          file_names<<-unique(Results$Filename)
                                          files<<-paste0(sub(file_names,
@@ -269,15 +264,12 @@ server <- shinyServer(function(input, output) {
                                          for (x in seq_along(files)){
                                              cat(file=stderr(),"Analysis in progress","\n");
                                              print(x);
-                                             print(files[x]) #cat(file=stderr(),print(file[x]))
+                                             print(files[x])
                                              incProgress(amount=(1/(x*1000)),message="Calculating doublets...");
                                              data_coords<<-read.table(file = files[x], header = TRUE, dec = ".");
-                                             #data_coords<<-data_coords[,c("X","Y")];
                                              data_coords<<-data_coords[,c("Area","X","Y")];
                                              coord_mat2<<-data_coords[c("X","Y")]
-                                             #
                                              possible_multiple_coords<<-data_coords[c("X","Y")][which(data_coords$Area > area_val),]
-                                             #num_area_multiples <<- nrow(possible_multiple_coords)
                                              # Doublet dots in line below
                                              data_coords<<-data_coords[c("X","Y")][which(data_coords$Area<=area_val),]
 
@@ -286,11 +278,8 @@ server <- shinyServer(function(input, output) {
                                                      dots<<-dim(coord_mat2)[1];
                                                      num_neighbors<<-0;
                                                      doublets<<-0;
-                                                     #
                                                      num_area_multiples <<- nrow(possible_multiple_coords);
                                                      num_dist_multiples <<- 0
-
-                                                     #
                                                      number1<<-append(x=number1,values=dots);
                                                      number2<<-append(x=number2,values=num_neighbors);
                                                      number3<<-append(x=number3,values=doublets);
@@ -312,23 +301,18 @@ server <- shinyServer(function(input, output) {
                                                          dots<<-dim(coord_mat2)[1];
                                                          num_neighbors<<-0;
                                                          doublets<<-0;
-                                                         #
                                                          num_area_multiples <<- nrow(possible_multiple_coords);
                                                          num_dist_multiples <<- 0
-                                                         #
                                                          number1<<-append(x=number1,values=dots);
                                                          number2<<-append(x=number2,values=num_neighbors);
                                                          number3<<-append(x=number3,values=doublets);
-                                                         #
                                                          number4<<-append(x=number4,values=num_area_multiples);
                                                          number5<<-append(x=number5,values=num_dist_multiples)
-                                                         #
                                                          return(c(number1,number2,number3,number4,number5))
                                                      }
                                                      assign_values()
                                                  } else {
                                                      return_values <- function() {
-
                                                          neighbor_coords<<-unique(coord_mat[neighbors,]);
                                                          cat(file=stderr(),"Neighbor_Coords created","\n");
                                                          neighbor_distances<<-pointDistance(p1=neighbor_coords,lonlat=FALSE);
@@ -343,16 +327,12 @@ server <- shinyServer(function(input, output) {
                                                                  num_neighbors<<-0;
                                                                  doublets<<-0;
                                                                  num_area_multiples <<- nrow(possible_multiple_coords);
-                                                                 #
                                                                  num_dist_multiples <<- 0
-                                                                 #
                                                                  number1<<-append(x=number1,values=dots);
                                                                  number2<<-append(x=number2,values=num_neighbors);
                                                                  number3<<-append(x=number3,values=doublets);
                                                                  number4<<-append(x=number4,values=num_area_multiples)
-                                                                 #
                                                                  number5<<-append(x=number5,values=num_dist_multiples)
-                                                                 #
                                                                  cat(file=stderr(),"Neighbor distances = 0 block","\n")
                                                                  return(c(number1,number2,number3,number4,number5))
                                                              }
@@ -377,11 +357,7 @@ server <- shinyServer(function(input, output) {
                                                                      cat(file=stderr(),"Neighbor_Coords2 is Missing Block","\n");
                                                                      doublets<<-0;
                                                                      num_area_multiples <<- nrow(possible_multiple_coords);
-
-                                                                     #
                                                                      neighbors_not_doublets <<- dplyr::anti_join(data.frame(neighbor_coords),data.frame(neighbor_coords2))
-
-
 
                                                                      if (all(is.na(neighbors_not_doublets)) == TRUE | (as.numeric(nrow(neighbors_not_doublets)) == 1)){
 
@@ -395,22 +371,15 @@ server <- shinyServer(function(input, output) {
 
                                                                      } else {
 
-                                                                         #if (as.numeric(nrow(neighbors_not_doublets)) > 1) {
                                                                          assign_values6 <- function(){
                                                                              cat(file=stderr(),"Not Or Block","\n")
                                                                              custom_distance <- dist(x=neighbors_not_doublets)
                                                                              hc.c <- hclust(custom_distance)
-                                                                             # member_dynam.c <- dynamicTreeCut::cutreeDynamic(dendro = hc.c,
-                                                                             #                                                  minClusterSize = 3,
-                                                                             #                                                  method = "hybrid",
-                                                                             #                                                  distM = as.matrix(custom_distance),
-                                                                             #                                                  deepSplit = 4)
                                                                              member_dynam.c <- dynamicTreeCut::cutreeDynamic(dendro = hc.c,
                                                                                                                              minClusterSize = 2,
                                                                                                                              method = "hybrid",
                                                                                                                              distM = as.matrix(custom_distance),
                                                                                                                              deepSplit = 3)
-
                                                                              num_dist_multiples <<- length(as.vector(table(member_dynam.c))) # of clusters
                                                                              number5 <<- append(x=number5,values=num_dist_multiples)
                                                                          }
@@ -424,7 +393,6 @@ server <- shinyServer(function(input, output) {
                                                                      number2<<-append(x=number2,values=num_neighbors);
                                                                      number3<<-append(x=number3,values=doublets);
                                                                      number4<<-append(x=number4,values=num_area_multiples)
-                                                                     #number5<<-append(x=number5,values=num_dist_multiples)
                                                                      return(c(number1,number2,number3,number4,number5))
                                                                  }
                                                                  assign_values2()
@@ -441,8 +409,6 @@ server <- shinyServer(function(input, output) {
                                                                      doublets<<-(sum(apply(neighbor_distances2<=thres,1,sum,na.rm=TRUE),na.rm=TRUE)/2);
                                                                      doublets<<-round(doublets,digits=0);
                                                                      num_area_multiples <<- nrow(possible_multiple_coords);
-
-                                                                     #
                                                                      neighbors_not_doublets <<- dplyr::anti_join(data.frame(neighbor_coords),data.frame(neighbor_coords2))
                                                                      if (all(is.na(neighbors_not_doublets)) == "TRUE" | as.numeric(nrow(neighbors_not_doublets)) == 1){
                                                                          assign_values5 <- function(){
@@ -454,11 +420,6 @@ server <- shinyServer(function(input, output) {
                                                                      } else {
                                                                          custom_distance <<- dist(x=neighbors_not_doublets)
                                                                          hc.c <<- hclust(custom_distance)
-                                                                         # member_dynam.c <- dynamicTreeCut::cutreeDynamic(dendro = hc.c,
-                                                                         #                                                 minClusterSize = 3,
-                                                                         #                                                 method = "hybrid",
-                                                                         #                                                 distM = as.matrix(custom_distance),
-                                                                         #                                                 deepSplit = 4)
                                                                          member_dynam.c <<- dynamicTreeCut::cutreeDynamic(dendro = hc.c,
                                                                                                                           minClusterSize = 2,
                                                                                                                           method = "hybrid",
@@ -495,18 +456,6 @@ server <- shinyServer(function(input, output) {
 
                                                                          actual_img<-EBImage::readImage(img_file_path)
 
-                                                                         # Doublets Plot PDF
-                                                                         # pdf(file=paste0("Doublets_Plotted_",sub(img_file_name,pattern=".tif",replacement=""),".pdf"))
-                                                                         # par(oma=c(0,0,5,0),mar=c(5,5,5,5),mfrow=c(1,1))
-                                                                         # plot(actual_img)
-                                                                         # ggplot2::xlim(c(1,dim(actual_img)[1]))
-                                                                         # ggplot2::ylim(ylim=c(dim(actual_img)[1],1))
-                                                                         # mtext(side=3,outer=TRUE,text=paste(dots,"","Dots"," ",num_neighbors,"","Neighbors"," ",doublets,"","Doublets (Red)","\n",img_file_name))
-                                                                         # points(neighbor_coords2,col="red",pch=20,cex=0.3,xlim=c(1,dim(actual_img)[1]),ylim=c(dim(actual_img)[1],1))
-                                                                         # par(bg="black")
-                                                                         # plot(neighbor_coords2,bg="black",col="red",pch=1,xlim=c(1,dim(actual_img)[1]),ylim=c(dim(actual_img)[1],1))
-                                                                         # dev.off()
-
                                                                          # Doublets Plot Postscript (EPS)
                                                                          postscript(file=paste0("Doublets_Plotted_",sub(img_file_name,pattern=".tif",replacement=""),".eps"),horizontal = FALSE)
                                                                          par(oma=c(0,0,5,0),mar=c(5,5,5,5),mfrow=c(1,1))
@@ -515,12 +464,9 @@ server <- shinyServer(function(input, output) {
                                                                          ggplot2::ylim(ylim=c(dim(actual_img)[1],1))
                                                                          mtext(side=3,outer=TRUE,text=paste(dots,"","Dots"," ",num_neighbors,"","Neighbors"," ",doublets,"","Doublets (Red)","\n",img_file_name))
                                                                          points(neighbor_coords2,col="red",pch=20,cex=0.3,xlim=c(1,dim(actual_img)[1]),ylim=c(dim(actual_img)[1],1))
-                                                                         #par(bg="black")
-                                                                         #plot(neighbor_coords2,bg="black",col="red",pch=1,xlim=c(1,dim(actual_img)[1]),ylim=c(dim(actual_img)[1],1))
                                                                          dev.off()
 
                                                                          ## Area and Dist Multiples Plot PDF
-                                                                         #pdf(file=paste0("Area_Dist_Multiples_Plotted_",sub(img_file_name,pattern=".tif",replacement=""),".pdf"))
                                                                          pdf(file=paste0("Large_Blobs_Dist_Multiples_Plotted_",sub(img_file_name,pattern=".tif",replacement=""),".pdf"))
                                                                          par(oma=c(0,0,5,0),mar=c(5,5,5,5),mfrow=c(1,1))
                                                                          plot(actual_img)
@@ -528,12 +474,8 @@ server <- shinyServer(function(input, output) {
                                                                          ggplot2::ylim(ylim=c(dim(actual_img)[1],1))
                                                                          mtext(side=3,outer=TRUE,text=paste(dots,"","Dots"," ",num_neighbors,"","Neighbors"," ",num_area_multiples,"","Large Blobs (Green)"," ",num_dist_multiples,"","Dist_Multiples (Multi-Color)","\n",img_file_name))
                                                                          points(possible_multiple_coords,col="green",pch=20,cex=0.3,xlim=c(1,dim(actual_img)[1]),ylim=c(dim(actual_img)[1],1))
-                                                                         #
-                                                                         #points(neighbors_not_doublets,col="yellow",pch=20,cex=0.3,xlim=c(1,dim(actual_img)[1]),ylim=c(dim(actual_img)[1],1))
-                                                                         #color_vec <- RColorBrewer::brewer.pal(n = 12, name = "Set3")
                                                                          color_vec <- c(RColorBrewer::brewer.pal(n = 12, name = "Paired"),RColorBrewer::brewer.pal(name="PiYG",n=4)[1:2])
                                                                          points(neighbors_not_doublets,col=color_vec[member_dynam.c],pch=20,cex=0.3,xlim=c(1,dim(actual_img)[1]),ylim=c(dim(actual_img)[1],1))
-                                                                         #
                                                                          par(bg="black")
                                                                          plot(possible_multiple_coords,bg="black",col="green",pch=20,xlim=c(1,dim(actual_img)[1]),ylim=c(dim(actual_img)[1],1))
                                                                          points(neighbors_not_doublets,col=color_vec[member_dynam.c],pch=1,xlim=c(1,dim(actual_img)[1]),ylim=c(dim(actual_img)[1],1))
@@ -541,7 +483,6 @@ server <- shinyServer(function(input, output) {
 
                                                                          # Area and Dist Multiples Plot Postscript (EPS)
 
-                                                                         #postscript(file=paste0("Area_Dist_Multiples_Plotted_",sub(img_file_name,pattern=".tif",replacement=""),".eps"),horizontal = FALSE)
                                                                          postscript(file=paste0("Large_Blobs_Dist_Multiples_Plotted_",sub(img_file_name,pattern=".tif",replacement=""),".eps"),horizontal = FALSE)
                                                                          par(oma=c(0,0,5,0),mar=c(5,5,5,5),mfrow=c(1,1))
                                                                          plot(actual_img)
@@ -549,36 +490,15 @@ server <- shinyServer(function(input, output) {
                                                                          ggplot2::ylim(ylim=c(dim(actual_img)[1],1))
                                                                          mtext(side=3,outer=TRUE,text=paste(dots,"","Dots"," ",num_neighbors,"","Neighbors"," ",num_area_multiples,"","Large Blobs (Green)"," ",num_dist_multiples,"","Dist_Multiples (Multi-Color)","\n",img_file_name))
                                                                          points(possible_multiple_coords,col="green",pch=20,cex=0.3,xlim=c(1,dim(actual_img)[1]),ylim=c(dim(actual_img)[1],1))
-                                                                         #
-                                                                         #points(neighbors_not_doublets,col="yellow",pch=20,cex=0.3,xlim=c(1,dim(actual_img)[1]),ylim=c(dim(actual_img)[1],1))
-                                                                         #color_vec <- RColorBrewer::brewer.pal(n = 12, name = "Set3")
                                                                          color_vec <- c(RColorBrewer::brewer.pal(n = 12, name = "Paired"),RColorBrewer::brewer.pal(name="PiYG",n=4)[1:2])
                                                                          points(neighbors_not_doublets,col=color_vec[member_dynam.c],pch=20,cex=0.3,xlim=c(1,dim(actual_img)[1]),ylim=c(dim(actual_img)[1],1))
-                                                                         #
-                                                                         #par(bg="black")
-                                                                         #plot(possible_multiple_coords,bg="black",col="green",pch=20,xlim=c(1,dim(actual_img)[1]),ylim=c(dim(actual_img)[1],1))
-                                                                         #points(neighbors_not_doublets,col=color_vec[member_dynam.c],pch=1,xlim=c(1,dim(actual_img)[1]),ylim=c(dim(actual_img)[1],1))
                                                                          dev.off()
-
-                                                                         # Doublets and Area Multiples Plot
-                                                                         # pdf(file=paste0("Doublets_and_Area_Dist_Multiples_Plotted_",sub(img_file_name,pattern=".tif",replacement=""),".pdf"))
-                                                                         # par(oma=c(0,0,5,0),mar=c(5,5,5,5),mfrow=c(1,1))
-                                                                         # plot(actual_img)
-                                                                         # ggplot2::xlim(c(1,dim(actual_img)[1]))
-                                                                         # ggplot2::ylim(ylim=c(dim(actual_img)[1],1))
-                                                                         # mtext(side=3,outer=TRUE,text=paste(dots,"","Dots"," ",num_neighbors,"","Neighbors"," ",doublets,"","Doublets (Red)"," ",num_area_multiples,"","Area_Multiples (Green)"," ",num_dist_multiples,"","Dist_Multiples (Yellow)","\n",img_file_name))
-                                                                         # points(neighbor_coords2,col="red",pch=20,cex=0.3,xlim=c(1,dim(actual_img)[1]),ylim=c(dim(actual_img)[1],1))
-                                                                         # points(possible_multiple_coords,col="green",pch=20,cex=0.3,xlim=c(1,dim(actual_img)[1]),ylim=c(dim(actual_img)[1],1))
-                                                                         # points(neighbors_not_doublets,col="yellow",pch=20,cex=0.3,xlim=c(1,dim(actual_img)[1]),ylim=c(dim(actual_img)[1],1))
-                                                                         # dev.off()
                                                                      };
 
                                                                      number1<<-append(x=number1,values=dots);
                                                                      number2<<-append(x=number2,values=num_neighbors);
                                                                      number3<<-append(x=number3,values=doublets);
-                                                                     #
                                                                      number4<<-append(x=number4,values=num_area_multiples)
-                                                                     #
                                                                      return(c(neighbor_coords,neighbor_distances,sum_dist_neigh_coords,neighbor_coords2,neighbor_distances2,indices_original_points,indices_new_points,dots,num_neighbors,doublets,num_area_multiples,number1,number2,number3,number4,number5))
 
                                                                  }
@@ -605,15 +525,11 @@ server <- shinyServer(function(input, output) {
                                          sum_Dots<-sum(doublet_count_file$Dots)
                                          sum_Neighbors<-sum(doublet_count_file$Neighbors)
                                          sum_Doublets<-sum(doublet_count_file$Doublets)
-                                         #
-                                         #sum_Area_Multiples<-sum(doublet_count_file$Area_Multiples)
                                          sum_Area_Multiples<-sum(doublet_count_file$Large_Blobs)
                                          sum_Dist_Multiples<-sum(doublet_count_file$Dist_Multiples)
-
                                          sums<-c(sum_Dots,sum_Neighbors,sum_Doublets,sum_Area_Multiples,sum_Dist_Multiples)
                                          sums<-matrix(sums,ncol=5)
                                          colnames(sums)<-c("Sum_of_Dots","Sum_of_Neighbors","Sum_of_Doublets","Sum_of_Area_Multiples","Sum_of_Dist_Multiples")
-                                         #
                                          write.table(x=sums,file="Totals.csv",row.names=FALSE,col.names=TRUE)
                                          openxlsx::write.xlsx(x=sums,file="Totals.xlsx",colNames = TRUE,rowNames = FALSE)
 
@@ -623,35 +539,19 @@ server <- shinyServer(function(input, output) {
                                      create_combined_summary_file <- function(){
                                          cat(file=stderr(),"Creating Combined Summary File","\n");
                                          real_nurse_data <<- read.csv2(file="Doublet_Count_Summary.csv",header=TRUE)
-                                         real_nurse_Results <<- Results #read.csv2(file="Results.csv",header=TRUE,sep=",")
-
-                                         #correct_dcsf_names <- sub(x=real_nurse_data$File,pattern = "_coords.csv",replacement = ".tif")
+                                         real_nurse_Results <<- Results
                                          correct_dcsf_names <<- sub(x=real_nurse_data$File,pattern = "_coords.csv",replacement = "")
-
                                          sorted_files_Results <<- sort(unique(real_nurse_Results$Filename))
                                          sorted_files_Results_no_ext <<- sub(x=sort(unique(real_nurse_Results$Filename)),pattern=".tif",replacement = "")
 
-
-                                         length(correct_dcsf_names) # 994
-                                         length(sorted_files_Results) # 994
 
                                          areas_list <<- list()
                                          e <- NULL
                                          list_placeholder <- NULL
                                          for(e in 1:length(sorted_files_Results)){
-                                             #print(e)
                                              list_placeholder <- list(Results$Area[which(sub(x=sort(Results$Filename),pattern=".tif",replacement = "") == sorted_files_Results_no_ext[e])])
                                              areas_list <<- c(areas_list,list_placeholder)
                                          }
-
-                                         # areas_list <<- list()
-                                         # e <- NULL
-                                         # list_placeholder <- NULL
-                                         # for(e in 1:length(sorted_files_Results)){
-                                         #     #print(e)
-                                         #     list_placeholder <- list(Results$Area[which(Results$Filename == sorted_files_Results[e])])
-                                         #     areas_list <<- c(areas_list,list_placeholder)
-                                         # }
 
                                          areas_vector <<- sapply(X=areas_list,FUN = length)
 
@@ -688,13 +588,10 @@ server <- shinyServer(function(input, output) {
                                      cat(file=stderr(),"CSF counted","\n");
                                      combined_data <- read.csv2("Combined_Summary_File.csv")
                                      aggregate_area_ranges <- function(data_var,label){
-                                         #for (t in length(table(cut(sizes_1_25$Dots_Read, breaks=seq(0, 1000, 100))))){
                                          for (t in 1:length(table(cut(data_var$Dots_Read, breaks=seq(0, 1000, 100))))){
-                                             #print(t)
                                              end_1 <- seq(100,1000,100)
                                              begin <- seq(0,900,100)
                                              area_range_array <- NULL
-                                             #area_ranges <- sizes_1_25$Dot_Area[sizes_1_25$Dots_Read <= end[t] & sizes_1_25$Dots_Read > begin[t]]
                                              area_ranges <- data_var$Dot_Area[data_var$Dots_Read <= end_1[t] & data_var$Dots_Read > begin[t]]
                                              area_range_array <- c(area_range_array, area_ranges)
                                              write.csv(area_range_array,file=paste0("Areas_Range_",begin[t],'_',end_1[t],"_",label,".csv"),row.names = FALSE)
@@ -794,11 +691,6 @@ server <- shinyServer(function(input, output) {
                         colnames(sums)<-c("Sum of Dots","Sum of Neighbors","Sum of Doublets")
                         write.table(x=sums,file=paste0("Totals_","DCSF_",list_of_conditions[l],".csv"),row.names=FALSE,col.names=TRUE)
                         openxlsx::write.xlsx(x=sums,file=paste0("Totals_","DCSF_",list_of_conditions[l],".xlsx"),colNames = TRUE,rowNames = FALSE)
-                        # Produce a Total for each condition nurse # and oocyte # from DCSF file
-                        # Calculate ratio = sum(doublets) / sum(dots)
-                        #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-                        #found_files <- stringr::str_extract_all(dcsf_file$File,pattern=paste0(list_of_conditions[l],"_._","|",list_of_conditions[l],"_.._"))
 
                         found_files <- stringr::str_extract_all(dcsf_file$File,pattern=paste0(list_of_conditions[l],"_._","|",list_of_conditions[l],"_.._","|",list_of_conditions[l],".","|",list_of_conditions[l],".."))
 
@@ -806,8 +698,6 @@ server <- shinyServer(function(input, output) {
                         z<-NULL
                         r<-NULL
                         for (z in seq_along(found_unique_files)){
-                            #print(z)
-                            #print(found_unique_files[[z]])
                             rows_for_file_z<-which(stringr::str_detect(string=dcsf_file$File,pattern=found_unique_files[[z]]) == TRUE)
                             file_z_contents<-dcsf_file[rows_for_file_z,]
 
@@ -825,17 +715,12 @@ server <- shinyServer(function(input, output) {
                             colnames(ratio) <- "Doublet_Index"
                             write.table(x=ratio,file=paste0(found_unique_files[[z]],"Doublet_Index.csv"),row.names=FALSE,col.names=TRUE)
 
-                            # List all Doublet Index files for nurse# or oocyte# for condition[l] for Doublet Index Summary File
-                            #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                            #list_of_doublet_index_file_names <- list.files(pattern=list_of_conditions[l])[grep(x=list.files(pattern=list_of_conditions[l]),pattern="_Doublet_Index.csv")]
                             list_of_doublet_index_file_names <- list.files(pattern=list_of_conditions[l])[grep(x=list.files(pattern=list_of_conditions[l]),pattern="Doublet_Index.csv")]
-                            #condition_doublet_index_files_data_frame <- data.frame(matrix(nrow=1*10^6,ncol=2))
                             condition_doublet_index_files_data_frame <- data.frame(rep(x=NA,1*10^6),rep(x=NA,1*10^6),stringsAsFactors = FALSE)
                             colnames(condition_doublet_index_files_data_frame) <- c("File","Doublet_Index")
                             condition_doublet_index_files_data_frame$File[1:length(list_of_doublet_index_file_names)] <- list_of_doublet_index_file_names
 
                             for (r in seq_along(list_of_doublet_index_file_names)){
-                                #print(r)
                                 fraction<-read.table(file=list_of_doublet_index_file_names[r],header=TRUE,sep=",",dec=".")
 
                                 condition_doublet_index_files_data_frame$Doublet_Index[r] <- as.numeric(fraction)
@@ -849,11 +734,9 @@ server <- shinyServer(function(input, output) {
                             # List all Total files for nurse# or oocyte# for condition[l] for Titer (Dot_Total) Column
 
                             list_of_total_file_names <- list.files(pattern=list_of_conditions[l])[grep(x=list.files(pattern=list_of_conditions[l]),pattern="Totals.csv")]
-                            #condition_total_files_data_frame <- data.frame(matrix(nrow=1*10^6,ncol=2))
                             condition_total_files_data_frame <- data.frame(rep(x=NA,1*10^6),rep(x=NA,1*10^6),stringsAsFactors = FALSE)
                             colnames(condition_total_files_data_frame) <- c("File","Titer")
                             condition_total_files_data_frame$File[1:length(list_of_total_file_names)] <- list_of_total_file_names
-                            #condition_doublet_index_files_data_frame <- na.exclude(condition_doublet_index_files_data_frame)
                             for (r in seq_along(list_of_total_file_names)){
 
                                 fraction<-read.table(file=list_of_total_file_names[r],header=TRUE,dec=".")
@@ -867,7 +750,6 @@ server <- shinyServer(function(input, output) {
 
 
                         }
-                        ####
                         # Create Titer Summary File
                         t<-NULL
                         all_total_files <- list.files(pattern=paste0("Titers_"))
@@ -887,7 +769,6 @@ server <- shinyServer(function(input, output) {
 
                     file_d_contents <- list()
                     for (d in seq_along(all_doublet_indices_files)){
-                        #print(d)
                         file_d_contents[[d]] <- read.table(file=all_doublet_indices_files[d],header=TRUE,dec=".")
 
                     }
@@ -905,26 +786,15 @@ server <- shinyServer(function(input, output) {
                     names(data_input_file_doublet_indices) <- list_of_conditions
                     names(data_input_file_titers) <- list_of_conditions
                     for (u in seq_along(list_of_conditions)){
-                        #print(u)
-                        #print(paste("Doublet_Index",u))
                         rows <- which(doublet_indices$File %>% grepl(pattern=list_of_conditions[u]) == TRUE)
-                        # #      print(rows)
                         doublet_indices$File[rows] <- list_of_conditions[u]
-                        # #      print("Conditions assigned")
                         data_input_file_doublet_indices[1:length(doublet_indices$Doublet_Index[which((dplyr::select(.data = doublet_indices,"File") == list_of_conditions[u]) ==TRUE)]),list_of_conditions[u]] <- doublet_indices$Doublet_Index[which((dplyr::select(.data = doublet_indices,"File") == list_of_conditions[u]) ==TRUE)]
-                        # #      print("Data Input File Modified")
                     }
-                    # # #
                     u <- NULL
                     for (u in seq_along(list_of_conditions)){
-                        # #      #print(u)
-                        # #      print(paste("Titer",u))
                         rows <- which(titers$File %>% grepl(pattern=list_of_conditions[u]) == TRUE)
-                        # # print(rows)
                         titers$File[rows] <- list_of_conditions[u]
-                        # #      print("Conditions assigned")
                         data_input_file_titers[1:length(titers$Titer[which((dplyr::select(.data = titers,"File") == list_of_conditions[u]) ==TRUE)]),list_of_conditions[u]] <- titers$Titer[which((dplyr::select(.data = titers,"File") == list_of_conditions[u]) ==TRUE)]
-                        # #      print("Data Input File Modified")
                     }
                     data_input_file_doublet_indices <- data_input_file_doublet_indices[rowSums(is.na(data_input_file_doublet_indices)) != ncol(data_input_file_doublet_indices), ]
                     data_input_file_titers <- data_input_file_titers[rowSums(is.na(data_input_file_titers)) != ncol(data_input_file_titers),]
@@ -938,9 +808,7 @@ server <- shinyServer(function(input, output) {
                         condition_files<-list.files(pattern=list_of_conditions[l])
                         folder_name<-paste0(list_of_conditions[l],"_folder")
                         condition_files<-condition_files[condition_files != folder_name]
-                        #fs::file_move(path=condition_files,new_path=paste0("./",folder_name))
                         fs::file_move(path=condition_files,new_path=paste0(folder_name))
-                        #incProgress(amount=1/l, detail = "Organized Files into Folders")
                     }
                     incProgress(amount=1, detail = "Organized Files into Folders")
                 })
@@ -999,6 +867,18 @@ server <- shinyServer(function(input, output) {
 
                         number_of_dots_input <- seq(dot_seq_vec[1],dot_seq_vec[2],dot_seq_vec[3])
 
+                        if(input$dot_shape == "Circle"){
+                          custom_shape <<- 19
+                        }
+
+                        if(input$dot_shape == "Square"){
+                          custom_shape <<- 15
+                        }
+
+                        if(input$dot_shape == "Triangle"){
+                          custom_shape <<- 17
+                        }
+
                         if(input$dot_sizes == "1, 9"){
                             prob_dist <<- c(0.4,0,0.5,0,0,0.02,0.01,0.01,0)
                         }
@@ -1015,66 +895,51 @@ server <- shinyServer(function(input, output) {
                             store_prob_dist_file_input_on_disk_and_read_into_mem <- function() {
                                 file.copy(from = input$prob_dist_file_input$datapath,to="Prob_Dist_File.csv", overwrite = TRUE);
                                 prob_dist_file<<-read.table(file = "Prob_Dist_File.csv", header = TRUE, sep = ",", dec = ".");
-                                #write.csv(prob_dist_file,)
                                 openxlsx::write.xlsx(x=prob_dist_file,file="Prob_Dist_File.xlsx",colNames = TRUE,rowNames = FALSE)
                             };
                             store_prob_dist_file_input_on_disk_and_read_into_mem();
                             prob_dist <<- prob_dist_file[,1]
 
                         }
-                        ###########
                         max_cores <- parallel::detectCores()
                         cores_to_use <- max_cores - 1
                         cluster <- parallel::makeCluster(cores_to_use)
                         doParallel::registerDoParallel(cluster)
-                        #
-                        plot_dot_cloud_reduced_margin_true_area_size_replacement_unique <- function(number_of_dots=dot_seq_vec,margin,sizes=dot_size_vec,dims_image=input$image_dim,image_num=i,cell_type) {
 
-                            #for(n in 1:length(as.numeric(images_set_number))){
-                            #img_dim <- 512
+                        plot_dot_cloud_reduced_margin_true_area_size_replacement_unique <- function(number_of_dots=dot_seq_vec,margin,sizes=dot_size_vec,dims_image=input$image_dim,image_num=i,cell_type,shape=custom_shape) {
+
                             img_dim <- as.numeric(dims_image)
 
                             number_dots <- as.numeric(number_of_dots)
                             margin <- as.numeric(margin)
                             # Dot size
-                            # ADJUST SIZE CHOICE
-                            #size <- sample(x=1:25,size=number_dots,replace=TRUE,prob = prob_dist)
-                            #size <- sample(x=1:2,size=number_dots,replace=TRUE,prob = c(0.5,0.5))
+
                             size <- sample(x=as.numeric(sizes[1]):as.numeric(sizes[2]),size=number_dots,replace=TRUE,prob = prob_dist)
 
                             # Dot position
-                            #x <- sample(x=1:margin,size=number_dots,replace=TRUE)
                             x <- sample(x=1:margin,size=1000000,replace=TRUE)
-                            #y <- sample(x=1:img_dim,size=number_dots,replace=TRUE)
                             y <- sample(x=1:img_dim,size=1000000,replace=TRUE)
                             x_y_points <- matrix(data=c(x,y),ncol=2)
                             x_y_points <- unique(x_y_points)
                             x_y_points <- x_y_points[c(1:number_dots),]
-                            #x_y_points <- na.exclude(unique(x_y_points))[1:number_dots]
                             number_of_points <- nrow(x_y_points)
-
-                            #print(paste0("Num_Dots: ",number_of_points))
 
                             while (number_of_points != number_dots){
                                 x <- sample(x=1:margin,size=number_dots,replace=TRUE)
                                 y <- sample(x=1:img_dim,size=number_dots,replace=TRUE)
                                 x_y_points <- matrix(data=c(x,y),ncol=2)
                                 number_of_points <- nrow(unique(x_y_points))
-                                #print(paste0("Num_Dots: ",number_of_points))
                             }
                             n <- as.numeric(image_num)
-                            #file_number <- sample(x=1:500000000,size=1,replace=FALSE)
                             # ADD Pad to Filename
                             stringr::str_pad(string=number_dots,width=max(nchar(max(dot_seq_vec))),pad = "0")
 
-                            #file_name <- paste0(number_dots, "__","Number-Dots-","synth-",cell_type,"-image-",n)
                             file_name <- paste0(stringr::str_pad(string=number_dots,width=max(nchar(max(dot_seq_vec))),pad = "0"), "__","Number-Dots-","synth-",cell_type,"-image-",n)
 
 
-                            #pdf(file=paste0(file_name,".pdf"))
                             tiff(filename = paste0(file_name,".tiff"),width=img_dim,height=img_dim,res=72)
                             par(bg="black")
-                            plot(x_y_points,col="white",pch=17,cex=size/22,xlim=c(1,img_dim),ylim=c(img_dim,1))
+                            plot(x_y_points,col="white",pch=shape,cex=size/22,xlim=c(1,img_dim),ylim=c(img_dim,1))
                             dev.off()
 
                             # BW Segmentation Code Add In
@@ -1082,38 +947,36 @@ server <- shinyServer(function(input, output) {
                             bw_img <- EBImage::bwlabel(x=img)
                             EBImage::writeImage(x=bw_img,files=paste0(file_name,".tiff"),type ="tiff",quality = 100)
 
-                            #img <- EBImage::readImage(files = paste0("025__Number-Dots-synth-nurse-image-1",".tiff"),type ="tiff",all=TRUE)
-                            #bw_img <- EBImage::bwlabel(x=img)
-                            #EBImage::writeImage(x=bw_img,files=paste0("025__Number-Dots-synth-nurse-image-1",".tiff"),type ="tiff",quality = 100)
+
 
                         }
                         f <- NULL
                         i <- NULL
                         if(input$cell_type == "Nurse"){
-                            foreach(f = 1:length(number_of_dots_input),.export=c("isolate","dot_size_vec","dot_seq_vec","number_of_dots_input","prob_dist","input")) %dopar% {
+                            foreach(f = 1:length(number_of_dots_input),.export=c("isolate","dot_size_vec","dot_seq_vec","number_of_dots_input","prob_dist","input","custom_shape")) %dopar% {
                             isolate({
                                 for (i in 1:(as.numeric(input$number_of_images))){
-                                plot_dot_cloud_reduced_margin_true_area_size_replacement_unique(number_of_dots=number_of_dots_input[f],margin=175,sizes=dot_size_vec,dims_image=input$image_dim,image_num=i,cell_type = "nurse")
+                                plot_dot_cloud_reduced_margin_true_area_size_replacement_unique(number_of_dots=number_of_dots_input[f],margin=175,sizes=dot_size_vec,dims_image=input$image_dim,image_num=i,cell_type = "nurse",shape=custom_shape)
                             }
                             });
                             }
                             parallel::stopCluster(cluster);
                             }
                         if(input$cell_type == "Oocyte"){
-                            foreach(f = 1:length(number_of_dots_input),.export=c("isolate","dot_size_vec","dot_seq_vec","number_of_dots_input","prob_dist","input")) %dopar% {
+                            foreach(f = 1:length(number_of_dots_input),.export=c("isolate","dot_size_vec","dot_seq_vec","number_of_dots_input","prob_dist","input","custom_shape")) %dopar% {
                                 isolate({
                                     for (i in 1:(as.numeric(input$number_of_images))){
-                                        plot_dot_cloud_reduced_margin_true_area_size_replacement_unique(number_of_dots=number_of_dots_input[f],margin=144,sizes=dot_size_vec,dims_image=input$image_dim,image_num=i,cell_type = "oocyte")
+                                        plot_dot_cloud_reduced_margin_true_area_size_replacement_unique(number_of_dots=number_of_dots_input[f],margin=144,sizes=dot_size_vec,dims_image=input$image_dim,image_num=i,cell_type = "oocyte",shape=custom_shape)
                                     }
                                 });
                             }
                             parallel::stopCluster(cluster);
                         }
                         if(input$cell_type == "Other"){
-                            foreach(f = 1:length(number_of_dots_input),.export=c("isolate","dot_size_vec","dot_seq_vec","number_of_dots_input","prob_dist","input")) %dopar% {
+                            foreach(f = 1:length(number_of_dots_input),.export=c("isolate","dot_size_vec","dot_seq_vec","number_of_dots_input","prob_dist","input","custom_shape")) %dopar% {
                                 isolate({
                                     for (i in 1:(as.numeric(input$number_of_images))){
-                                        plot_dot_cloud_reduced_margin_true_area_size_replacement_unique(number_of_dots=number_of_dots_input[f],margin=as.numeric(input$custom_margin_value),sizes=dot_size_vec,dims_image=input$image_dim,image_num=i,cell_type = "other")
+                                        plot_dot_cloud_reduced_margin_true_area_size_replacement_unique(number_of_dots=number_of_dots_input[f],margin=as.numeric(input$custom_margin_value),sizes=dot_size_vec,dims_image=input$image_dim,image_num=i,cell_type = "other",shape=custom_shape)
                                     }
                                 });
                             }
@@ -1141,9 +1004,6 @@ server <- shinyServer(function(input, output) {
                     download_files <- list.dirs(recursive=FALSE)
                     download_files <- download_files[download_files != "./rsconnect"]
                     download_files <- c(download_files,list.files(pattern=".tif"))
-                    #download_files <- c(download_files,list.files(pattern=".csv"))
-                    #download_files <- c(download_files,list.files(pattern=".pdf"))
-                    #download_files <- c(download_files,list.files(pattern=".eps"))
                     zip(zipfile = con, files = download_files)},
                 contentType = "application/zip")
             # Carry out the Analysis
@@ -1152,7 +1012,6 @@ server <- shinyServer(function(input, output) {
                     withProgress(message = "Obtaining coordinates from Results.csv", min = 0, max = 1, style = "old", value = 0,
                                  expr = {
                                      req(input$results_csv_file_2);
-                                     #req(Results);
 
                                      store_Results_input_on_disk_and_read_into_mem <- function() {
                                          file.copy(from = input$results_csv_file_2$datapath,to="Results.csv", overwrite = TRUE);
@@ -1162,7 +1021,6 @@ server <- shinyServer(function(input, output) {
                                      store_Results_input_on_disk_and_read_into_mem();
 
                                      extract_coordinates_from_Results_to_files<-function() {
-                                         #Results<<-Results[,c("X","Y","Filename")]
                                          Results<<-Results[,c("Area","X","Y","Filename")]
                                          file_names<<-unique(Results$Filename)
                                          files<<-paste0(sub(file_names,
@@ -1219,15 +1077,12 @@ server <- shinyServer(function(input, output) {
                                          for (x in seq_along(files)){
                                              cat(file=stderr(),"Analysis in progress","\n");
                                              print(x);
-                                             print(files[x]) #cat(file=stderr(),print(file[x]))
+                                             print(files[x])
                                              incProgress(amount=(1/(x*1000)),message="Calculating doublets...");
                                              data_coords<<-read.table(file = files[x], header = TRUE, dec = ".");
-                                             #data_coords<<-data_coords[,c("X","Y")];
                                              data_coords<<-data_coords[,c("Area","X","Y")];
                                              coord_mat2<<-data_coords[c("X","Y")]
-                                             #
                                              possible_multiple_coords<<-data_coords[c("X","Y")][which(data_coords$Area > area_val),]
-                                             #num_area_multiples <<- nrow(possible_multiple_coords)
                                              # Doublet dots in line below
                                              data_coords<<-data_coords[c("X","Y")][which(data_coords$Area<=area_val),]
 
@@ -1236,11 +1091,8 @@ server <- shinyServer(function(input, output) {
                                                      dots<<-dim(coord_mat2)[1];
                                                      num_neighbors<<-0;
                                                      doublets<<-0;
-                                                     #
                                                      num_area_multiples <<- nrow(possible_multiple_coords);
                                                      num_dist_multiples <<- 0
-
-                                                     #
                                                      number1<<-append(x=number1,values=dots);
                                                      number2<<-append(x=number2,values=num_neighbors);
                                                      number3<<-append(x=number3,values=doublets);
@@ -1262,17 +1114,13 @@ server <- shinyServer(function(input, output) {
                                                          dots<<-dim(coord_mat2)[1];
                                                          num_neighbors<<-0;
                                                          doublets<<-0;
-                                                         #
                                                          num_area_multiples <<- nrow(possible_multiple_coords);
                                                          num_dist_multiples <<- 0
-                                                         #
                                                          number1<<-append(x=number1,values=dots);
                                                          number2<<-append(x=number2,values=num_neighbors);
                                                          number3<<-append(x=number3,values=doublets);
-                                                         #
                                                          number4<<-append(x=number4,values=num_area_multiples);
                                                          number5<<-append(x=number5,values=num_dist_multiples)
-                                                         #
                                                          return(c(number1,number2,number3,number4,number5))
                                                      }
                                                      assign_values()
@@ -1293,16 +1141,12 @@ server <- shinyServer(function(input, output) {
                                                                  num_neighbors<<-0;
                                                                  doublets<<-0;
                                                                  num_area_multiples <<- nrow(possible_multiple_coords);
-                                                                 #
                                                                  num_dist_multiples <<- 0
-                                                                 #
                                                                  number1<<-append(x=number1,values=dots);
                                                                  number2<<-append(x=number2,values=num_neighbors);
                                                                  number3<<-append(x=number3,values=doublets);
                                                                  number4<<-append(x=number4,values=num_area_multiples)
-                                                                 #
                                                                  number5<<-append(x=number5,values=num_dist_multiples)
-                                                                 #
                                                                  cat(file=stderr(),"Neighbor distances = 0 block","\n")
                                                                  return(c(number1,number2,number3,number4,number5))
                                                              }
@@ -1328,7 +1172,6 @@ server <- shinyServer(function(input, output) {
                                                                      doublets<<-0;
                                                                      num_area_multiples <<- nrow(possible_multiple_coords);
 
-                                                                     #
                                                                      neighbors_not_doublets <<- dplyr::anti_join(data.frame(neighbor_coords),data.frame(neighbor_coords2))
                                                                      if (all(is.na(neighbors_not_doublets)) == "TRUE" | nrow(neighbors_not_doublets) == 1){
                                                                          assign_values5 <- function(){
@@ -1340,11 +1183,7 @@ server <- shinyServer(function(input, output) {
                                                                      } else {
                                                                          custom_distance <<- dist(x=neighbors_not_doublets)
                                                                          hc.c <<- hclust(custom_distance)
-                                                                         # member_dynam.c <- dynamicTreeCut::cutreeDynamic(dendro = hc.c,
-                                                                         #                                                 minClusterSize = 3,
-                                                                         #                                                 method = "hybrid",
-                                                                         #                                                 distM = as.matrix(custom_distance),
-                                                                         #                                                 deepSplit = 4)
+
                                                                          member_dynam.c <<- dynamicTreeCut::cutreeDynamic(dendro = hc.c,
                                                                                                                           minClusterSize = 2,
                                                                                                                           method = "hybrid",
@@ -1354,7 +1193,6 @@ server <- shinyServer(function(input, output) {
                                                                          num_dist_multiples <<- length(as.vector(table(member_dynam.c))) # of clusters
                                                                          number5 <<- append(x=number5,values=num_dist_multiples)
                                                                      }
-                                                                     #
 
                                                                      number1<<-append(x=number1,values=dots);
                                                                      number2<<-append(x=number2,values=num_neighbors);
@@ -1377,7 +1215,6 @@ server <- shinyServer(function(input, output) {
                                                                      doublets<<-round(doublets,digits=0);
                                                                      num_area_multiples <<- nrow(possible_multiple_coords);
 
-                                                                     #
                                                                      neighbors_not_doublets <<- dplyr::anti_join(data.frame(neighbor_coords),data.frame(neighbor_coords2))
                                                                      if (all(is.na(neighbors_not_doublets)) == "TRUE" | nrow(neighbors_not_doublets) == 1){
                                                                          assign_values5 <- function(){
@@ -1389,11 +1226,7 @@ server <- shinyServer(function(input, output) {
                                                                      } else {
                                                                          custom_distance <<- dist(x=neighbors_not_doublets)
                                                                          hc.c <<- hclust(custom_distance)
-                                                                         # member_dynam.c <- dynamicTreeCut::cutreeDynamic(dendro = hc.c,
-                                                                         #                                                 minClusterSize = 3,
-                                                                         #                                                 method = "hybrid",
-                                                                         #                                                 distM = as.matrix(custom_distance),
-                                                                         #                                                 deepSplit = 4)
+
                                                                          member_dynam.c <<- dynamicTreeCut::cutreeDynamic(dendro = hc.c,
                                                                                                                           minClusterSize = 2,
                                                                                                                           method = "hybrid",
@@ -1430,17 +1263,6 @@ server <- shinyServer(function(input, output) {
 
                                                                          actual_img<-EBImage::readImage(img_file_path)
 
-                                                                         # Doublets Plot PDF
-                                                                         # pdf(file=paste0("Doublets_Plotted_",sub(img_file_name,pattern=".tif",replacement=""),".pdf"))
-                                                                         # par(oma=c(0,0,5,0),mar=c(5,5,5,5),mfrow=c(1,1))
-                                                                         # plot(actual_img)
-                                                                         # ggplot2::xlim(c(1,dim(actual_img)[1]))
-                                                                         # ggplot2::ylim(ylim=c(dim(actual_img)[1],1))
-                                                                         # mtext(side=3,outer=TRUE,text=paste(dots,"","Dots"," ",num_neighbors,"","Neighbors"," ",doublets,"","Doublets (Red)","\n",img_file_name))
-                                                                         # points(neighbor_coords2,col="red",pch=20,cex=0.3,xlim=c(1,dim(actual_img)[1]),ylim=c(dim(actual_img)[1],1))
-                                                                         # par(bg="black")
-                                                                         # plot(neighbor_coords2,bg="black",col="red",pch=1,xlim=c(1,dim(actual_img)[1]),ylim=c(dim(actual_img)[1],1))
-                                                                         # dev.off()
 
                                                                          # Doublets Plot Postscript (EPS)
                                                                          postscript(file=paste0("Doublets_Plotted_",sub(img_file_name,pattern=".tiff",replacement=""),".eps"),horizontal = FALSE)
@@ -1450,12 +1272,9 @@ server <- shinyServer(function(input, output) {
                                                                          ggplot2::ylim(ylim=c(dim(actual_img)[1],1))
                                                                          mtext(side=3,outer=TRUE,text=paste(dots,"","Dots"," ",num_neighbors,"","Neighbors"," ",doublets,"","Doublets (Red)","\n",img_file_name))
                                                                          points(neighbor_coords2,col="red",pch=20,cex=0.3,xlim=c(1,dim(actual_img)[1]),ylim=c(dim(actual_img)[1],1))
-                                                                         #par(bg="black")
-                                                                         #plot(neighbor_coords2,bg="black",col="red",pch=1,xlim=c(1,dim(actual_img)[1]),ylim=c(dim(actual_img)[1],1))
                                                                          dev.off()
 
                                                                          ## Area and Dist Multiples Plot PDF
-                                                                         #pdf(file=paste0("Area_Dist_Multiples_Plotted_",sub(img_file_name,pattern=".tif",replacement=""),".pdf"))
                                                                          pdf(file=paste0("Large_Blobs_Dist_Multiples_Plotted_",sub(img_file_name,pattern=".tiff",replacement=""),".pdf"))
                                                                          par(oma=c(0,0,5,0),mar=c(5,5,5,5),mfrow=c(1,1))
                                                                          plot(actual_img)
@@ -1463,12 +1282,8 @@ server <- shinyServer(function(input, output) {
                                                                          ggplot2::ylim(ylim=c(dim(actual_img)[1],1))
                                                                          mtext(side=3,outer=TRUE,text=paste(dots,"","Dots"," ",num_neighbors,"","Neighbors"," ",num_area_multiples,"","Large Blobs (Green)"," ",num_dist_multiples,"","Dist_Multiples (Multi-Color)","\n",img_file_name))
                                                                          points(possible_multiple_coords,col="green",pch=20,cex=0.3,xlim=c(1,dim(actual_img)[1]),ylim=c(dim(actual_img)[1],1))
-                                                                         #
-                                                                         #points(neighbors_not_doublets,col="yellow",pch=20,cex=0.3,xlim=c(1,dim(actual_img)[1]),ylim=c(dim(actual_img)[1],1))
-                                                                         #color_vec <- RColorBrewer::brewer.pal(n = 12, name = "Set3")
                                                                          color_vec <- c(RColorBrewer::brewer.pal(n = 12, name = "Paired"),RColorBrewer::brewer.pal(name="PiYG",n=4)[1:2])
                                                                          points(neighbors_not_doublets,col=color_vec[member_dynam.c],pch=20,cex=0.3,xlim=c(1,dim(actual_img)[1]),ylim=c(dim(actual_img)[1],1))
-                                                                         #
                                                                          par(bg="black")
                                                                          plot(possible_multiple_coords,bg="black",col="green",pch=20,xlim=c(1,dim(actual_img)[1]),ylim=c(dim(actual_img)[1],1))
                                                                          points(neighbors_not_doublets,col=color_vec[member_dynam.c],pch=1,xlim=c(1,dim(actual_img)[1]),ylim=c(dim(actual_img)[1],1))
@@ -1476,7 +1291,6 @@ server <- shinyServer(function(input, output) {
 
                                                                          # Area and Dist Multiples Plot Postscript (EPS)
 
-                                                                         #postscript(file=paste0("Area_Dist_Multiples_Plotted_",sub(img_file_name,pattern=".tif",replacement=""),".eps"),horizontal = FALSE)
                                                                          postscript(file=paste0("Large_Blobs_Dist_Multiples_Plotted_",sub(img_file_name,pattern=".tiff",replacement=""),".eps"),horizontal = FALSE)
                                                                          par(oma=c(0,0,5,0),mar=c(5,5,5,5),mfrow=c(1,1))
                                                                          plot(actual_img)
@@ -1484,36 +1298,16 @@ server <- shinyServer(function(input, output) {
                                                                          ggplot2::ylim(ylim=c(dim(actual_img)[1],1))
                                                                          mtext(side=3,outer=TRUE,text=paste(dots,"","Dots"," ",num_neighbors,"","Neighbors"," ",num_area_multiples,"","Large Blobs (Green)"," ",num_dist_multiples,"","Dist_Multiples (Multi-Color)","\n",img_file_name))
                                                                          points(possible_multiple_coords,col="green",pch=20,cex=0.3,xlim=c(1,dim(actual_img)[1]),ylim=c(dim(actual_img)[1],1))
-                                                                         #
-                                                                         #points(neighbors_not_doublets,col="yellow",pch=20,cex=0.3,xlim=c(1,dim(actual_img)[1]),ylim=c(dim(actual_img)[1],1))
-                                                                         #color_vec <- RColorBrewer::brewer.pal(n = 12, name = "Set3")
                                                                          color_vec <- c(RColorBrewer::brewer.pal(n = 12, name = "Paired"),RColorBrewer::brewer.pal(name="PiYG",n=4)[1:2])
                                                                          points(neighbors_not_doublets,col=color_vec[member_dynam.c],pch=20,cex=0.3,xlim=c(1,dim(actual_img)[1]),ylim=c(dim(actual_img)[1],1))
-                                                                         #
-                                                                         #par(bg="black")
-                                                                         #plot(possible_multiple_coords,bg="black",col="green",pch=20,xlim=c(1,dim(actual_img)[1]),ylim=c(dim(actual_img)[1],1))
-                                                                         #points(neighbors_not_doublets,col=color_vec[member_dynam.c],pch=1,xlim=c(1,dim(actual_img)[1]),ylim=c(dim(actual_img)[1],1))
                                                                          dev.off()
 
-                                                                         # Doublets and Area Multiples Plot
-                                                                         # pdf(file=paste0("Doublets_and_Area_Dist_Multiples_Plotted_",sub(img_file_name,pattern=".tif",replacement=""),".pdf"))
-                                                                         # par(oma=c(0,0,5,0),mar=c(5,5,5,5),mfrow=c(1,1))
-                                                                         # plot(actual_img)
-                                                                         # ggplot2::xlim(c(1,dim(actual_img)[1]))
-                                                                         # ggplot2::ylim(ylim=c(dim(actual_img)[1],1))
-                                                                         # mtext(side=3,outer=TRUE,text=paste(dots,"","Dots"," ",num_neighbors,"","Neighbors"," ",doublets,"","Doublets (Red)"," ",num_area_multiples,"","Area_Multiples (Green)"," ",num_dist_multiples,"","Dist_Multiples (Yellow)","\n",img_file_name))
-                                                                         # points(neighbor_coords2,col="red",pch=20,cex=0.3,xlim=c(1,dim(actual_img)[1]),ylim=c(dim(actual_img)[1],1))
-                                                                         # points(possible_multiple_coords,col="green",pch=20,cex=0.3,xlim=c(1,dim(actual_img)[1]),ylim=c(dim(actual_img)[1],1))
-                                                                         # points(neighbors_not_doublets,col="yellow",pch=20,cex=0.3,xlim=c(1,dim(actual_img)[1]),ylim=c(dim(actual_img)[1],1))
-                                                                         # dev.off()
                                                                      };
 
                                                                      number1<<-append(x=number1,values=dots);
                                                                      number2<<-append(x=number2,values=num_neighbors);
                                                                      number3<<-append(x=number3,values=doublets);
-                                                                     #
                                                                      number4<<-append(x=number4,values=num_area_multiples)
-                                                                     #
                                                                      return(c(neighbor_coords,neighbor_distances,sum_dist_neigh_coords,neighbor_coords2,neighbor_distances2,indices_original_points,indices_new_points,dots,num_neighbors,doublets,num_area_multiples,number1,number2,number3,number4,number5))
 
                                                                  }
@@ -1540,15 +1334,12 @@ server <- shinyServer(function(input, output) {
                                          sum_Dots<-sum(doublet_count_file$Dots)
                                          sum_Neighbors<-sum(doublet_count_file$Neighbors)
                                          sum_Doublets<-sum(doublet_count_file$Doublets)
-                                         #
-                                         #sum_Area_Multiples<-sum(doublet_count_file$Area_Multiples)
                                          sum_Area_Multiples<-sum(doublet_count_file$Large_Blobs)
                                          sum_Dist_Multiples<-sum(doublet_count_file$Dist_Multiples)
 
                                          sums<-c(sum_Dots,sum_Neighbors,sum_Doublets,sum_Area_Multiples,sum_Dist_Multiples)
                                          sums<-matrix(sums,ncol=5)
                                          colnames(sums)<-c("Sum_of_Dots","Sum_of_Neighbors","Sum_of_Doublets","Sum_of_Area_Multiples","Sum_of_Dist_Multiples")
-                                         #
                                          write.table(x=sums,file="Totals.csv",row.names=FALSE,col.names=TRUE)
                                          openxlsx::write.xlsx(x=sums,file="Totals.xlsx",colNames = TRUE,rowNames = FALSE)
 
@@ -1666,13 +1457,8 @@ server <- shinyServer(function(input, output) {
                                      cat(file=stderr(),"CSF counted","\n");
                                      combined_data <- read.csv2("Combined_Summary_File.csv")
                                      aggregate_area_ranges <- function(data_var,label){
-                                         #for (t in 1:length(table(cut(data_var$Dots_Read, breaks=seq(0, 1000, 100))))){
                                          for (t in 1:length(table(cut(data_var$Dots_Read, breaks=seq(min(data_var$Dots_Plotted), max(data_var$Dots_Plotted), (unique(data_var$Dots_Plotted)[2]-unique(data_var$Dots_Plotted)[1])))))){
-                                             #print(t)
-                                             #end_1 <- seq(100,1000,100)
                                              end_1 <- seq(min(data_var$Dots_Plotted),max(data_var$Dots_Plotted),(unique(data_var$Dots_Plotted)[2]-unique(data_var$Dots_Plotted)[1]))
-                                             #begin <- seq(0,900,100)
-                                             #begin <- seq(0, (max(data_var$Dots_Plotted) - (unique(data_var$Dots_Plotted)[2]-unique(data_var$Dots_Plotted)[1])), ((unique(data_var$Dots_Plotted)[2]-unique(data_var$Dots_Plotted)[1])))
                                              begin <- c(0,seq(min(data_var$Dots_Plotted), (max(data_var$Dots_Plotted) - (unique(data_var$Dots_Plotted)[2]-unique(data_var$Dots_Plotted)[1])), ((unique(data_var$Dots_Plotted)[2]-unique(data_var$Dots_Plotted)[1]))))
 
                                              area_range_array <- NULL
