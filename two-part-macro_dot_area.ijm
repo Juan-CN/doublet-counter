@@ -68,9 +68,9 @@ function processImage(imageFile)
 
 	filename = getTitle();
 	run("8-bit");
-        	setAutoThreshold("Default dark no-reset");
-        	setOption("BlackBackground", true);
-        	run("Convert to Mask");
+        //setAutoThreshold("Default dark no-reset");
+        setOption("BlackBackground", true);
+        run("Convert to Mask");
 	//run("Set Measurements...", "area centroid limit redirect=None decimal=2");
 	run("Set Measurements...", "area centroid redirect=None decimal=2");
 	run("Analyze Particles...","size=0-Infinity circularity=0.00-1.00 display");
